@@ -1,0 +1,14 @@
+{
+  "name": "campus-food-street",
+  "version": "0.1.0",
+  "private": true,
+  "description": "校园美食街：微信小程序与统一后端，不包含 H5 / App",
+  "scripts": {
+    "setup": "npm --prefix apps/api install && npm --prefix apps/miniapp install",
+    "build": "npm --prefix apps/api run build && npm --prefix apps/miniapp run build:mp-weixin",
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "dev:miniapp": "npm --prefix apps/miniapp run dev:mp-weixin",
+    "test:api": "npm --prefix apps/api test",
+    "test:smoke": "node scripts/smoke.mjs"
+  }
+}
