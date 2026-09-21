@@ -1,1 +1,16 @@
-{"name":"校园美食街","appid":"__UNI__CAMPUSFOOD","description":"校园自取点餐微信小程序","versionName":"0.1.0","versionCode":"100","mp-weixin":{"appid":"","setting":{"urlCheck":false,"es6":true,"minified":true},"usingComponents":true}}
+{
+    "name": "校园美食街",
+    "appid": "__UNI__CAMPUSFOOD",
+    "description": "校园自取点餐微信小程序",
+    "versionName": "0.1.0",
+    "versionCode": "100",
+    "mp-weixin": {
+        "appid": "",
+        "setting": {
+            "urlCheck": false,
+            "es6": true,
+            "minified": true
+        },
+        "usingComponents": true
+    }
+}

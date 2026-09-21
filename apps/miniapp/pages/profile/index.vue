@@ -1,1 +1,85 @@
-<script setup lang="ts">import {ref} from 'vue';import {api} from '../../lib/api';const u=ref(api.user);async function login(role:string){await api.login(role);u.value=api.user;uni.showToast({title:'登录成功'})}function merchant(){if(u.value?.role==='MERCHANT')uni.navigateTo({url:'/pages/merchant/index'});else uni.showToast({title:'请先选择商户演示登录',icon:'none'})}</script><template><view class="page"><view class="profile"><view class="avatar">{{u?.nickname?.slice(0,1)||'食'}}</view><view><view class="nick">{{u?.nickname||'同学，欢迎你'}}</view><view class="sub">校园美食街用户</view></view></view><view class="card"><view class="line" @click="login('STUDENT')">🎓 <text>学生演示登录</text><text>›</text></view><view class="line" @click="login('MERCHANT')">🏪 <text>商户演示登录</text><text>›</text></view><view class="line" @click="merchant">⚙️ <text>商户工作台</text><text>›</text></view></view><view class="hint">演示环境使用本地登录；生产环境接入微信 code 登录。</view></view></template><style scoped>.page{padding:60rpx 32rpx}.profile{display:flex;align-items:center;padding:30rpx 12rpx 60rpx}.avatar{width:120rpx;height:120rpx;background:#ffdfc8;color:#d95425;border-radius:40rpx;display:flex;align-items:center;justify-content:center;font-size:56rpx;font-weight:800;margin-right:26rpx}.nick{font-size:40rpx;font-weight:800}.sub{color:#aaa;margin-top:12rpx}.card{background:#fff;border-radius:28rpx;padding:0 28rpx}.line{display:flex;align-items:center;padding:34rpx 0;border-bottom:1rpx solid #f3ede8;font-size:30rpx}.line text:nth-child(2){flex:1;margin-left:20rpx}.line text:last-child{color:#bbb}.hint{color:#aaa;font-size:22rpx;line-height:1.7;margin:40rpx 16rpx}</style>
+<script setup
+    lang="ts">    import { ref } from 'vue'; import { api } from '../../lib/api'; const u = ref(api.user); async function login(role: string) { await api.login(role); u.value = api.user; uni.showToast({ title: '登录成功' }) } function merchant() { if (u.value?.role === 'MERCHANT') uni.navigateTo({ url: '/pages/merchant/index' }); else uni.showToast({ title: '请先选择商户演示登录', icon: 'none' }) }</script>
+<template>
+    <view class="page">
+        <view class="profile">
+            <view class="avatar">{{ u?.nickname?.slice(0, 1) || '食' }}</view>
+            <view>
+                <view class="nick">{{ u?.nickname || '同学，欢迎你' }}</view>
+                <view class="sub">校园美食街用户</view>
+            </view>
+        </view>
+        <view class="card">
+            <view class="line" @click="login('STUDENT')">🎓 <text>学生演示登录</text><text>›</text></view>
+            <view class="line" @click="login('MERCHANT')">🏪 <text>商户演示登录</text><text>›</text></view>
+            <view class="line" @click="merchant">⚙️ <text>商户工作台</text><text>›</text></view>
+        </view>
+        <view class="hint">演示环境使用本地登录；生产环境接入微信 code 登录。</view>
+    </view>
+</template>
+<style
+    scoped>
+    .page {
+        padding: 60rpx 32rpx
+    }
+
+    .profile {
+        display: flex;
+        align-items: center;
+        padding: 30rpx 12rpx 60rpx
+    }
+
+    .avatar {
+        width: 120rpx;
+        height: 120rpx;
+        background: #ffdfc8;
+        color: #d95425;
+        border-radius: 40rpx;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56rpx;
+        font-weight: 800;
+        margin-right: 26rpx
+    }
+
+    .nick {
+        font-size: 40rpx;
+        font-weight: 800
+    }
+
+    .sub {
+        color: #aaa;
+        margin-top: 12rpx
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 28rpx;
+        padding: 0 28rpx
+    }
+
+    .line {
+        display: flex;
+        align-items: center;
+        padding: 34rpx 0;
+        border-bottom: 1rpx solid #f3ede8;
+        font-size: 30rpx
+    }
+
+    .line text:nth-child(2) {
+        flex: 1;
+        margin-left: 20rpx
+    }
+
+    .line text:last-child {
+        color: #bbb
+    }
+
+    .hint {
+        color: #aaa;
+        font-size: 22rpx;
+        line-height: 1.7;
+        margin: 40rpx 16rpx
+    }
+</style>

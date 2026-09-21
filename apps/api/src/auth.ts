@@ -1,3 +1,34 @@
-import {CanActivate,ExecutionContext,Injectable,UnauthorizedException,SetMetadata,createParamDecorator} from '@nestjs/common'; import * as jwt from 'jsonwebtoken'; import {PrismaService} from './prisma.service';
-export const Roles=(...r:string[])=>SetMetadata('roles',r); export const CurrentUser=createParamDecorator((_,ctx)=>ctx.switchToHttp().getRequest().user);
-@Injectable() export class AuthGuard implements CanActivate { constructor(private p:PrismaService){} async canActivate(ctx:ExecutionContext){const req=ctx.switchToHttp().getRequest(); const h=req.headers.authorization; if(!h)throw new UnauthorizedException(); try{const d:any=jwt.verify(h.replace('Bearer ',''),process.env.JWT_SECRET||'dev'); req.user=await this.p.user.findUnique({where:{id:d.sub}}); if(!req.user)throw 0; return true;}catch{throw new UnauthorizedException();}}}
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  SetMetadata,
+  createParamDecorator,
+} from "@nestjs/common";
+import * as jwt from "jsonwebtoken";
+import { PrismaService } from "./prisma.service";
+export const Roles = (...r: string[]) => SetMetadata("roles", r);
+export const CurrentUser = createParamDecorator(
+  (_, ctx) => ctx.switchToHttp().getRequest().user,
+);
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(private p: PrismaService) {}
+  async canActivate(ctx: ExecutionContext) {
+    const req = ctx.switchToHttp().getRequest();
+    const h = req.headers.authorization;
+    if (!h) throw new UnauthorizedException();
+    try {
+      const d: any = jwt.verify(
+        h.replace("Bearer ", ""),
+        process.env.JWT_SECRET || "dev",
+      );
+      req.user = await this.p.user.findUnique({ where: { id: d.sub } });
+      if (!req.user) throw 0;
+      return true;
+    } catch {
+      throw new UnauthorizedException();
+    }
+  }
+}

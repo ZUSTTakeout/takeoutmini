@@ -1,1 +1,80 @@
-<script setup lang="ts">import {ref,computed} from 'vue';import {onLoad} from '@dcloudio/uni-app';import {api} from '../../lib/api';const items=ref<any[]>([]),shopId=ref(''),remark=ref(''),total=computed(()=>items.value.reduce((n,x)=>n+x.price*x.quantity,0)),submitting=ref(false);onLoad((q:any)=>{shopId.value=q.shopId;items.value=uni.getStorageSync('cart')||[]});async function submit(){if(submitting.value)return;submitting.value=true;try{await api.login();const r=await api.request('/orders','POST',{shopId:shopId.value,items:items.value.map(x=>({productId:x.productId,quantity:x.quantity})),remark:remark.value,idempotencyKey:`mini-${Date.now()}-${Math.random()}`});uni.removeStorageSync('cart');uni.showToast({title:'下单成功'});setTimeout(()=>uni.redirectTo({url:`/pages/orders/index?id=${r.id}`}),500)}catch(e:any){uni.showToast({title:e.message,icon:'none'})}finally{submitting.value=false}}</script><template><view class="page"><view class="tip">到店自取 · 线下支付</view><view class="card"><view v-for="x in items" :key="x.productId" class="row"><text>{{x.name}} × {{x.quantity}}</text><text>{{api.money(x.price*x.quantity)}}</text></view><textarea v-model="remark" placeholder="备注：少辣、取餐时间…"/></view><view class="bottom"><view>合计 <text>{{api.money(total)}}</text></view><button :disabled="submitting" @click="submit">{{submitting?'提交中…':'确认下单'}}</button></view></view></template><style scoped>.page{padding:34rpx 32rpx}.tip{background:#fff0e5;color:#db5c2d;padding:22rpx;border-radius:18rpx}.card{background:#fff;border-radius:24rpx;margin-top:24rpx;padding:28rpx}.row{display:flex;justify-content:space-between;padding:22rpx 0;border-bottom:1rpx solid #f4eee9}.row text:last-child{color:#ed5c2c}textarea{width:100%;margin-top:25rpx;background:#faf7f4;padding:18rpx;box-sizing:border-box}.bottom{position:fixed;bottom:30rpx;left:30rpx;right:30rpx;background:#2d2824;color:white;border-radius:60rpx;padding:12rpx 18rpx 12rpx 30rpx;display:flex;align-items:center;justify-content:space-between}.bottom text{color:#ffb08d;font-size:34rpx;font-weight:bold}.bottom button{background:#f36d3b;color:#fff}</style>
+<script setup
+    lang="ts">    import { ref, computed } from 'vue'; import { onLoad } from '@dcloudio/uni-app'; import { api } from '../../lib/api'; const items = ref<any[]>([]), shopId = ref(''), remark = ref(''), total = computed(() => items.value.reduce((n, x) => n + x.price * x.quantity, 0)), submitting = ref(false); onLoad((q: any) => { shopId.value = q.shopId; items.value = uni.getStorageSync('cart') || [] }); async function submit() { if (submitting.value) return; submitting.value = true; try { await api.login(); const r = await api.request('/orders', 'POST', { shopId: shopId.value, items: items.value.map(x => ({ productId: x.productId, quantity: x.quantity })), remark: remark.value, idempotencyKey: `mini-${Date.now()}-${Math.random()}` }); uni.removeStorageSync('cart'); uni.showToast({ title: '下单成功' }); setTimeout(() => uni.redirectTo({ url: `/pages/orders/index?id=${r.id}` }), 500) } catch (e: any) { uni.showToast({ title: e.message, icon: 'none' }) } finally { submitting.value = false } }</script>
+<template>
+    <view class="page">
+        <view class="tip">到店自取 · 线下支付</view>
+        <view class="card">
+            <view v-for="x in items" :key="x.productId" class="row"><text>{{ x.name }} ×
+                    {{ x.quantity }}</text><text>{{ api.money(x.price * x.quantity) }}</text></view><textarea v-model="remark"
+                placeholder="备注：少辣、取餐时间…" />
+        </view>
+        <view class="bottom">
+            <view>合计 <text>{{ api.money(total) }}</text></view><button :disabled="submitting"
+                @click="submit">{{ submitting ? '提交中…' : '确认下单' }}</button>
+        </view>
+    </view>
+</template>
+<style
+    scoped>
+    .page {
+        padding: 34rpx 32rpx
+    }
+
+    .tip {
+        background: #fff0e5;
+        color: #db5c2d;
+        padding: 22rpx;
+        border-radius: 18rpx
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 24rpx;
+        margin-top: 24rpx;
+        padding: 28rpx
+    }
+
+    .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 22rpx 0;
+        border-bottom: 1rpx solid #f4eee9
+    }
+
+    .row text:last-child {
+        color: #ed5c2c
+    }
+
+    textarea {
+        width: 100%;
+        margin-top: 25rpx;
+        background: #faf7f4;
+        padding: 18rpx;
+        box-sizing: border-box
+    }
+
+    .bottom {
+        position: fixed;
+        bottom: 30rpx;
+        left: 30rpx;
+        right: 30rpx;
+        background: #2d2824;
+        color: white;
+        border-radius: 60rpx;
+        padding: 12rpx 18rpx 12rpx 30rpx;
+        display: flex;
+        align-items: center;
+        justify-content: space-between
+    }
+
+    .bottom text {
+        color: #ffb08d;
+        font-size: 34rpx;
+        font-weight: bold
+    }
+
+    .bottom button {
+        background: #f36d3b;
+        color: #fff
+    }
+</style>
