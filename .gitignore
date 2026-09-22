@@ -1,10 +1,14 @@
 node_modules/
+.npm-cache/
 dist/
 .env
 .env.*
 !.env.example
 *.log
+*.pid
 .DS_Store
 coverage/
 .local/
 apps/miniapp/project.private.config.json
+/project.config.json
+/project.private.config.json

@@ -1,209 +1,403 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
-import { api } from "../../lib/api";
-const shop = ref<any>({ categories: [], products: [] }),
-  cat = ref(""),
-  cart = ref<any[]>([]),
-  id = ref("");
-const errorMessage = (error: unknown) => error instanceof Error && error.message ? error.message : "加载失败，请稍后重试";
-const products = computed(
-    () =>
-      shop.value.products?.filter(
-        (p: any) => !cat.value || p.categoryId === cat.value,
-      ) || [],
+import QuantityStepper from "../../components/QuantityStepper.vue";
+import StateView from "../../components/StateView.vue";
+import { api, getErrorMessage } from "../../services/api";
+import { loadCart, reconcileCart, saveCart } from "../../services/cart";
+import type { CartItem, Product, Shop } from "../../types";
+
+const shop = ref<Shop | null>(null);
+const selectedCategory = ref("");
+const cart = ref<CartItem[]>([]);
+const shopId = ref("");
+const loading = ref(true);
+const error = ref("");
+
+const products = computed(() =>
+  (shop.value?.products || []).filter(
+    (product) =>
+      product.isAvailable &&
+      (!selectedCategory.value || product.categoryId === selectedCategory.value),
   ),
-  total = computed(() =>
-    cart.value.reduce((n: any, x: any) => n + x.price * x.quantity, 0),
-  );
+);
+const total = computed(() =>
+  cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
+);
+const itemCount = computed(() =>
+  cart.value.reduce((sum, item) => sum + item.quantity, 0),
+);
+
+function syncCart() {
+  if (!shopId.value) return;
+  const saved = loadCart(shopId.value);
+  cart.value = shop.value ? reconcileCart(saved, shop.value.products) : saved;
+  saveCart(shopId.value, cart.value);
+}
+
 async function load() {
+  if (!shopId.value) {
+    loading.value = false;
+    error.value = "店铺地址无效";
+    return;
+  }
+  loading.value = true;
+  error.value = "";
   try {
-    shop.value = await api.request("/shops/" + id.value);
-    cat.value = shop.value.categories?.[0]?.id || "";
-  } catch (error: unknown) {
-    uni.showToast({ title: errorMessage(error), icon: "none" });
+    const result = await api.shop(shopId.value);
+    if (!result) throw new Error("店铺不存在或已下线");
+    shop.value = result;
+    if (
+      selectedCategory.value &&
+      !result.categories.some((category) => category.id === selectedCategory.value)
+    ) {
+      selectedCategory.value = "";
+    }
+    syncCart();
+  } catch (reason: unknown) {
+    shop.value = null;
+    error.value = getErrorMessage(reason, "店铺加载失败，请稍后重试");
+  } finally {
+    loading.value = false;
   }
 }
-function add(p: any) {
-  const x = cart.value.find((x) => x.productId === p.id);
-  if (x) x.quantity++;
-  else
+
+function quantity(productId: string) {
+  return cart.value.find((item) => item.productId === productId)?.quantity || 0;
+}
+
+function changeQuantity(product: Product, nextQuantity: number) {
+  if (!shop.value?.isOpen) {
+    uni.showToast({ title: "店铺休息中", icon: "none" });
+    return;
+  }
+  const maximum = Math.min(product.stock, 99);
+  if (nextQuantity > maximum) {
+    uni.showToast({ title: `最多可选 ${maximum} 份`, icon: "none" });
+    return;
+  }
+  const index = cart.value.findIndex((item) => item.productId === product.id);
+  if (nextQuantity < 1) {
+    if (index >= 0) cart.value.splice(index, 1);
+  } else if (index >= 0) {
+    cart.value[index] = {
+      ...cart.value[index],
+      name: product.name,
+      price: product.price,
+      stock: product.stock,
+      quantity: nextQuantity,
+    };
+  } else {
     cart.value.push({
-      productId: p.id,
-      name: p.name,
-      price: p.price,
-      quantity: 1,
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      stock: product.stock,
+      quantity: nextQuantity,
     });
-  uni.setStorageSync(`cart:${id.value}`, cart.value);
+  }
+  saveCart(shopId.value, cart.value);
 }
+
 function goCart() {
-  if (!cart.value.length)
-    return uni.showToast({ title: "请先选择菜品", icon: "none" });
-  uni.navigateTo({ url: `/pages/cart/index?shopId=${id.value}` });
+  if (!cart.value.length) {
+    uni.showToast({ title: "请先选择菜品", icon: "none" });
+    return;
+  }
+  uni.navigateTo({
+    url: `/pages/cart/index?shopId=${encodeURIComponent(shopId.value)}`,
+  });
 }
-onLoad((q: any) => {
-  id.value = q.id;
-  load();
+
+onLoad((query) => {
+  shopId.value = typeof query?.id === "string" ? query.id : "";
+  syncCart();
+  void load();
 });
-onShow(() => {
-  cart.value = uni.getStorageSync(`cart:${id.value}`) || [];
-});
+
+onShow(syncCart);
 </script>
+
 <template>
-  <view class="page"
-    ><view class="head"
-      ><view class="logo">{{ shop.name?.slice(0, 1) }}</view
-      ><view
-        ><view class="name">{{ shop.name }}</view
-        ><view class="notice">{{ shop.notice }}</view></view
-      ></view
-    ><scroll-view scroll-x class="tabs"
-      ><text
-        v-for="c in shop.categories"
-        :key="c.id"
-        :class="{ active: cat === c.id }"
-        @click="cat = c.id"
-        >{{ c.name }}</text
-      ></scroll-view
-    ><view class="product" v-for="p in products" :key="p.id"
-      ><view class="pic">🍱</view
-      ><view class="info"
-        ><view class="pname">{{ p.name }}</view
-        ><view class="desc">{{ p.description || "新鲜现做，校园自取" }}</view
-        ><view class="price"
-          >{{ api.money(p.price) }} <text>剩余 {{ p.stock }}</text></view
-        ></view
-      ><button class="add" :disabled="p.stock < 1" @click="add(p)">
-        ＋
-      </button></view
-    ><view v-if="cart.length" class="bar"
-      ><view
-        ><text class="count"
-          >{{ cart.reduce((n, x) => n + x.quantity, 0) }} 份</text
+  <view class="page">
+    <StateView
+      :loading="loading"
+      :error="error"
+      action-text="重新加载"
+      @action="load"
+    />
+
+    <template v-if="shop && !loading && !error">
+      <view class="head">
+        <view class="logo">{{ shop.name.slice(0, 1) }}</view>
+        <view class="head-main">
+          <view class="name">{{ shop.name }}</view>
+          <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
+        </view>
+        <text :class="['shop-status', { closed: !shop.isOpen }]">
+          {{ shop.isOpen ? "营业中" : "休息中" }}
+        </text>
+      </view>
+
+      <scroll-view v-if="shop.categories.length" scroll-x class="tabs">
+        <text
+          :class="['tab', { active: selectedCategory === '' }]"
+          @click="selectedCategory = ''"
         >
-        · {{ api.money(total) }}</view
-      ><button @click="goCart">去结算</button></view
-    ></view
-  >
+          全部
+        </text>
+        <text
+          v-for="category in shop.categories"
+          :key="category.id"
+          :class="['tab', { active: selectedCategory === category.id }]"
+          @click="selectedCategory = category.id"
+        >
+          {{ category.name }}
+        </text>
+      </scroll-view>
+
+      <StateView
+        :empty="products.length === 0"
+        empty-text="该分类暂无可售菜品"
+      />
+
+      <view v-for="product in products" :key="product.id" class="product">
+        <image
+          v-if="product.image"
+          class="picture"
+          :src="product.image"
+          mode="aspectFill"
+        />
+        <view v-else class="picture placeholder">餐</view>
+        <view class="info">
+          <view class="product-name">{{ product.name }}</view>
+          <view class="description">{{ product.description || "新鲜现做" }}</view>
+          <view class="price-row">
+            <text class="price">{{ api.money(product.price) }}</text>
+            <text class="stock">剩余 {{ product.stock }}</text>
+          </view>
+        </view>
+        <QuantityStepper
+          v-if="quantity(product.id) > 0"
+          :value="quantity(product.id)"
+          :max="Math.min(product.stock, 99)"
+          :disabled="!shop.isOpen"
+          @change="changeQuantity(product, $event)"
+        />
+        <button
+          v-else
+          class="add-button"
+          :disabled="!shop.isOpen || product.stock < 1"
+          aria-label="加入购物车"
+          @click="changeQuantity(product, 1)"
+        >
+          ＋
+        </button>
+      </view>
+
+      <view v-if="cart.length && shop.isOpen" class="cart-bar">
+        <view>
+          <text class="cart-count">{{ itemCount }} 份</text>
+          <text class="separator">·</text>
+          <text>{{ api.money(total) }}</text>
+        </view>
+        <button class="checkout" @click="goCart">去结算</button>
+      </view>
+    </template>
+  </view>
 </template>
+
 <style scoped>
 .page {
-  padding: 30rpx 32rpx 140rpx;
+  padding: 30rpx 32rpx 180rpx;
 }
+
 .head {
   display: flex;
   align-items: center;
-  padding: 20rpx 0 34rpx;
+  padding: 18rpx 0 34rpx;
 }
-.logo {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 28rpx;
-  background: #ffdfc8;
+
+.logo,
+.picture {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  font-size: 48rpx;
+  background: #ffe0c9;
+  color: #ad431f;
   font-weight: 800;
-  color: #d95425;
-  margin-right: 22rpx;
 }
+
+.logo {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 22rpx;
+  font-size: 44rpx;
+}
+
+.head-main {
+  min-width: 0;
+  flex: 1;
+  margin-left: 22rpx;
+}
+
 .name {
-  font-size: 40rpx;
+  font-size: 38rpx;
   font-weight: 800;
 }
+
 .notice {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 10rpx;
-}
-.tabs {
+  overflow: hidden;
+  margin-top: 9rpx;
+  color: #776c64;
+  font-size: 23rpx;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  margin: 10rpx 0 30rpx;
 }
-.tabs text {
+
+.shop-status {
+  margin-left: 18rpx;
+  padding: 6rpx 10rpx;
+  border-radius: 8rpx;
+  background: #e4f3e8;
+  color: #28794a;
+  font-size: 20rpx;
+}
+
+.shop-status.closed {
+  background: #eee8e3;
+  color: #746a63;
+}
+
+.tabs {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 6rpx 0 20rpx;
+  white-space: nowrap;
+}
+
+.tab {
   display: inline-block;
-  margin-right: 36rpx;
-  color: #999;
-  font-size: 28rpx;
+  margin-right: 34rpx;
+  padding: 12rpx 0;
+  border-bottom: 5rpx solid transparent;
+  color: #756b64;
+  font-size: 27rpx;
 }
-.tabs .active {
-  color: #f36d3b;
+
+.tab.active {
+  border-bottom-color: #c4532b;
+  color: #a43e1d;
   font-weight: 700;
-  border-bottom: 6rpx solid #f36d3b;
-  padding-bottom: 12rpx;
 }
+
 .product {
   display: flex;
-  padding: 25rpx 0;
-  border-bottom: 1rpx solid #f1e9e2;
   align-items: center;
+  padding: 26rpx 0;
+  border-bottom: 1rpx solid #eadfd6;
 }
-.pic {
-  width: 150rpx;
-  height: 150rpx;
+
+.picture {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 20rpx;
+}
+
+.placeholder {
   background: #fff0e5;
-  border-radius: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 66rpx;
+  color: #bd6845;
+  font-size: 36rpx;
 }
+
 .info {
+  min-width: 0;
   flex: 1;
-  margin-left: 24rpx;
+  margin: 0 20rpx;
 }
-.pname {
-  font-size: 31rpx;
-  font-weight: 700;
-}
-.desc {
-  font-size: 22rpx;
-  color: #aaa;
-  margin: 13rpx 0;
-}
-.price {
-  color: #ed5c2c;
+
+.product-name {
   font-size: 30rpx;
   font-weight: 700;
 }
-.price text {
+
+.description {
+  overflow: hidden;
+  margin: 10rpx 0;
+  color: #7f756e;
+  font-size: 22rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+}
+
+.price {
+  color: #b84320;
+  font-size: 29rpx;
+  font-weight: 700;
+}
+
+.stock {
+  color: #887e77;
   font-size: 20rpx;
-  color: #aaa;
-  font-weight: 400;
-  margin-left: 10rpx;
 }
-.add {
-  background: #f36d3b;
-  color: #fff;
-  width: 62rpx;
-  height: 62rpx;
-  line-height: 58rpx;
+
+.add-button {
+  width: 58rpx;
+  height: 58rpx;
+  margin: 0;
   padding: 0;
-  font-size: 38rpx;
-}
-.bar {
-  position: fixed;
-  bottom: 24rpx;
-  left: 28rpx;
-  right: 28rpx;
-  background: #2d2824;
+  border-radius: 50%;
+  background: #c4532b;
   color: #fff;
-  border-radius: 60rpx;
-  padding: 12rpx 14rpx 12rpx 30rpx;
+  font-size: 34rpx;
+  line-height: 54rpx;
+}
+
+.add-button[disabled] {
+  background: #e8dfd7;
+  color: #a79d96;
+  opacity: 1;
+}
+
+.cart-bar {
+  position: fixed;
+  right: 28rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  left: 28rpx;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 12rpx 35rpx #0003;
-}
-.count {
-  color: #ffb08d;
-}
-.bar button {
-  background: #f36d3b;
+  padding: 12rpx 14rpx 12rpx 30rpx;
+  border-radius: 22rpx;
+  background: #2d2824;
   color: #fff;
-  padding: 0 34rpx;
+}
+
+.cart-count {
+  color: #ffb08d;
+  font-weight: 700;
+}
+
+.separator {
+  margin: 0 10rpx;
+  color: #bfb4ad;
+}
+
+.checkout {
   height: 70rpx;
+  margin: 0;
+  padding: 0 32rpx;
+  background: #d65d30;
+  color: #fff;
+  font-size: 26rpx;
   line-height: 70rpx;
 }
 </style>

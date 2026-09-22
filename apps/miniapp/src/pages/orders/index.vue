@@ -1,110 +1,219 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
-import { api } from "../../lib/api";
-const orders = ref<any[]>([]),
-  loading = ref(false);
-const errorMessage = (error: unknown) => error instanceof Error && error.message ? error.message : "请求失败，请稍后重试";
+import StateView from "../../components/StateView.vue";
+import { ApiError, api, getErrorMessage } from "../../services/api";
+import type { Order, OrderStatus } from "../../types";
+
+const STATUS_TEXT: Record<OrderStatus, string> = {
+  CREATED: "待接单",
+  ACCEPTED: "制作中",
+  READY: "待取餐",
+  COMPLETED: "已完成",
+  CANCELLED: "已取消",
+};
+
+const orders = ref<Order[]>([]);
+const loading = ref(false);
+const error = ref("");
+const needsStudentLogin = ref(false);
+const cancellingId = ref("");
+
+function goLogin() {
+  uni.switchTab({ url: "/pages/profile/index" });
+}
+
+function goBrowse() {
+  uni.switchTab({ url: "/pages/home/index" });
+}
+
 async function load() {
-  if (!api.token)
-    try {
-      await api.login();
-    } catch {}
+  error.value = "";
+  needsStudentLogin.value = false;
+  if (!api.isRole("STUDENT")) {
+    loading.value = false;
+    orders.value = [];
+    needsStudentLogin.value = true;
+    error.value = api.token
+      ? "当前账号不是学生身份，请切换账号后查看"
+      : "登录学生账号后即可查看订单";
+    return;
+  }
+
   loading.value = true;
   try {
-    orders.value = await api.request("/orders");
-  } catch (error: unknown) {
-    uni.showToast({ title: errorMessage(error), icon: "none" });
+    orders.value = await api.orders();
+  } catch (reason: unknown) {
+    orders.value = [];
+    if (reason instanceof ApiError && reason.statusCode === 401) {
+      needsStudentLogin.value = true;
+      error.value = "登录已过期，请重新登录";
+    } else {
+      error.value = getErrorMessage(reason, "订单加载失败，请稍后重试");
+    }
   } finally {
     loading.value = false;
   }
 }
-async function cancel(o: any) {
+
+function requestCancel(order: Order) {
+  uni.showModal({
+    title: "取消订单",
+    content: "确定取消这笔订单吗？",
+    confirmText: "确认取消",
+    confirmColor: "#b23b34",
+    success: ({ confirm }) => {
+      if (confirm) void cancel(order);
+    },
+  });
+}
+
+async function cancel(order: Order) {
+  if (cancellingId.value) return;
+  cancellingId.value = order.id;
   try {
-    await api.request(`/orders/${o.id}/status`, "PATCH", {
-      status: "CANCELLED",
+    await api.cancelOrder(order.id);
+    uni.showToast({ title: "订单已取消" });
+    await load();
+  } catch (reason: unknown) {
+    uni.showToast({
+      title: getErrorMessage(reason, "取消失败，请稍后重试"),
+      icon: "none",
     });
-    load();
-  } catch (error: unknown) {
-    uni.showToast({ title: errorMessage(error), icon: "none" });
+  } finally {
+    cancellingId.value = "";
   }
 }
+
 onShow(load);
 </script>
+
 <template>
-  <view class="page"
-    ><view class="title">我的订单</view
-    ><view v-if="!orders.length && !loading" class="empty"
-      >还没有订单，去逛逛附近店铺吧</view
-    ><view v-for="o in orders" :key="o.id" class="card"
-      ><view class="top"
-        ><text>{{ o.shop.name }}</text
-        ><text class="status">{{
-          (
-            {
-              CREATED: "待接单",
-              ACCEPTED: "制作中",
-              READY: "待取餐",
-              COMPLETED: "已完成",
-              CANCELLED: "已取消",
-            } as any
-          )[o.status]
-        }}</text></view
-      ><view class="items">{{
-        o.items.map((x: any) => x.name + " × " + x.quantity).join("、")
-      }}</view
-      ><view class="foot"
-        ><text>{{ api.money(o.total) }}</text
-        ><button v-if="o.status === 'CREATED'" @click="cancel(o)">
-          取消订单
-        </button></view
-      ></view
-    ></view
-  >
+  <view class="page">
+    <view class="page-head">
+      <view class="title">我的订单</view>
+      <view class="subtitle">订单状态会在这里更新</view>
+    </view>
+
+    <StateView :loading="loading" />
+    <StateView
+      v-if="!loading && error"
+      :error="error"
+      :action-text="needsStudentLogin ? '去登录' : '重新加载'"
+      @action="needsStudentLogin ? goLogin() : load()"
+    />
+    <StateView
+      v-else-if="!loading && !error"
+      :empty="orders.length === 0"
+      empty-text="还没有订单"
+      action-text="去点餐"
+      @action="goBrowse"
+    />
+
+    <view
+      v-for="order in orders"
+      v-show="!loading && !error"
+      :key="order.id"
+      class="order"
+    >
+      <view class="order-top">
+        <view>
+          <view class="shop-name">{{ order.shop.name }}</view>
+          <view class="order-number">#{{ order.number.slice(-6) }}</view>
+        </view>
+        <text class="status">{{ STATUS_TEXT[order.status] || order.status }}</text>
+      </view>
+      <view class="items">
+        {{ order.items.map((item) => `${item.name} × ${item.quantity}`).join("、") }}
+      </view>
+      <view class="order-foot">
+        <text class="total">{{ api.money(order.total) }}</text>
+        <text
+          v-if="order.status === 'CREATED'"
+          class="cancel-action"
+          role="button"
+          @click="requestCancel(order)"
+        >
+          {{ cancellingId === order.id ? "取消中…" : "取消订单" }}
+        </text>
+      </view>
+    </view>
+  </view>
 </template>
+
 <style scoped>
 .page {
-  padding: 44rpx 32rpx;
+  padding: 38rpx 32rpx 48rpx;
 }
+
+.page-head {
+  padding: 12rpx 4rpx 24rpx;
+}
+
 .title {
-  font-size: 48rpx;
+  font-size: 42rpx;
   font-weight: 800;
-  margin-bottom: 30rpx;
 }
-.card {
+
+.subtitle {
+  margin-top: 8rpx;
+  color: #81766e;
+  font-size: 23rpx;
+}
+
+.order {
+  margin-top: 20rpx;
+  padding: 26rpx;
+  border: 1rpx solid #eee3da;
+  border-radius: 22rpx;
   background: #fff;
-  border-radius: 24rpx;
-  padding: 28rpx;
-  margin-bottom: 20rpx;
 }
-.top,
-.foot {
+
+.order-top,
+.order-foot {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 30rpx;
+}
+
+.shop-name {
+  font-size: 29rpx;
   font-weight: 700;
 }
+
+.order-number {
+  margin-top: 6rpx;
+  color: #887e77;
+  font-size: 20rpx;
+}
+
 .status {
+  color: #a43e1d;
   font-size: 24rpx;
-  color: #f36d3b;
+  font-weight: 700;
 }
+
 .items {
-  color: #777;
-  font-size: 25rpx;
-  padding: 25rpx 0;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #eee5de;
+  color: #655c56;
+  font-size: 24rpx;
+  line-height: 1.6;
 }
-.foot text {
-  color: #ed5c2c;
+
+.order-foot {
+  padding-top: 20rpx;
 }
-.foot button {
-  font-size: 22rpx;
-  margin: 0;
-  padding: 8rpx 22rpx;
-  color: #888;
+
+.total {
+  color: #b84320;
+  font-size: 29rpx;
+  font-weight: 700;
 }
-.empty {
-  text-align: center;
-  color: #aaa;
-  padding-top: 180rpx;
+
+.cancel-action {
+  color: #8e342f;
+  font-size: 23rpx;
+  font-weight: 700;
 }
 </style>

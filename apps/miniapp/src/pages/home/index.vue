@@ -1,151 +1,171 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
-import { api } from "../../lib/api";
-const shops = ref<any[]>([]),
-  loading = ref(true);
-const errorMessage = (error: unknown) => error instanceof Error && error.message ? error.message : "加载失败，请稍后重试";
+import StateView from "../../components/StateView.vue";
+import { api, getErrorMessage } from "../../services/api";
+import type { Shop } from "../../types";
+
+const shops = ref<Shop[]>([]);
+const loading = ref(true);
+const error = ref("");
+
 async function load() {
   loading.value = true;
+  error.value = "";
   try {
-    shops.value = await api.request("/shops");
-  } catch (error: unknown) {
-    uni.showToast({ title: errorMessage(error), icon: "none" });
+    shops.value = await api.shops();
+  } catch (reason: unknown) {
+    shops.value = [];
+    error.value = getErrorMessage(reason, "店铺加载失败，请稍后重试");
   } finally {
     loading.value = false;
   }
 }
-function open(id: string) {
-  uni.navigateTo({ url: `/pages/shop/index?id=${id}` });
+
+function openShop(id: string) {
+  uni.navigateTo({ url: `/pages/shop/index?id=${encodeURIComponent(id)}` });
 }
+
 onShow(load);
 </script>
+
 <template>
-  <view class="page"
-    ><view class="hero"
-      ><view class="eyebrow">CAMPUS FOOD STREET</view
-      ><view class="title">今天想吃点什么？</view
-      ><view class="sub">附近好店 · 自取更快 · 价格透明</view></view
-    ><view class="search">⌕ <text>搜索店铺或菜品</text></view
-    ><view class="section"
-      ><view class="section-title"
-        >附近店铺 <text>{{ shops.length }} 家营业中</text></view
-      ><view v-if="loading" class="empty">正在加载美味…</view
-      ><view v-else-if="!shops.length" class="empty"
-        >暂无营业店铺，请先用演示商户登录初始化</view
-      ><view v-for="s in shops" :key="s.id" class="shop" @click="open(s.id)"
-        ><view class="logo">{{ s.name.slice(0, 1) }}</view
-        ><view class="shop-main"
-          ><view class="shop-name"
-            >{{ s.name }} <text class="open">营业中</text></view
-          ><view class="notice">{{ s.notice }}</view
-          ><view class="meta">校园自取 · 约 15 分钟</view></view
-        ><text class="arrow">›</text></view
-      ></view
-    ></view
-  >
+  <view class="page">
+    <view class="section-head">
+      <view>
+        <view class="title">附近店铺</view>
+        <view class="subtitle">到店自取</view>
+      </view>
+      <text v-if="!loading && !error" class="count">{{ shops.length }} 家营业中</text>
+    </view>
+
+    <StateView
+      :loading="loading"
+      :error="error"
+      :empty="!loading && !error && shops.length === 0"
+      empty-text="附近暂时没有营业店铺"
+      action-text="重新加载"
+      @action="load"
+    />
+
+    <view
+      v-for="shop in shops"
+      v-show="!loading && !error"
+      :key="shop.id"
+      class="shop-row"
+      role="button"
+      @click="openShop(shop.id)"
+    >
+      <view class="logo">{{ shop.name.slice(0, 1) }}</view>
+      <view class="shop-main">
+        <view class="shop-name">
+          <text>{{ shop.name }}</text>
+          <text class="open">营业中</text>
+        </view>
+        <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
+        <view class="meta">校园自取 · 约 15 分钟</view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
 </template>
+
 <style scoped>
 .page {
-  padding: 42rpx 32rpx;
+  padding: 38rpx 32rpx 48rpx;
 }
-.hero {
-  padding: 20rpx 4rpx 30rpx;
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12rpx 4rpx 24rpx;
 }
-.eyebrow {
-  font-size: 20rpx;
-  letter-spacing: 4rpx;
-  color: #f36d3b;
-  font-weight: 700;
-}
+
 .title {
-  font-size: 52rpx;
+  font-size: 42rpx;
   font-weight: 800;
-  margin-top: 18rpx;
 }
-.sub {
-  color: #9b9289;
-  margin-top: 14rpx;
+
+.subtitle,
+.count {
+  color: #81766e;
+  font-size: 23rpx;
 }
-.search {
-  background: #fff;
-  padding: 26rpx 30rpx;
-  border-radius: 24rpx;
-  color: #f36d3b;
-  box-shadow: 0 10rpx 35rpx #e8d9cc55;
+
+.subtitle {
+  margin-top: 8rpx;
 }
-.search text {
-  color: #aaa;
-  margin-left: 14rpx;
+
+.count {
+  padding-bottom: 4rpx;
 }
-.section {
-  margin-top: 54rpx;
-}
-.section-title {
-  font-size: 36rpx;
-  font-weight: 700;
-}
-.section-title text {
-  float: right;
-  font-size: 22rpx;
-  color: #aaa;
-  font-weight: 400;
-  margin-top: 12rpx;
-}
-.shop {
-  background: #fff;
-  margin-top: 22rpx;
-  border-radius: 28rpx;
-  padding: 28rpx;
+
+.shop-row {
   display: flex;
   align-items: center;
-  box-shadow: 0 8rpx 28rpx #e8d9cc40;
+  margin-top: 20rpx;
+  padding: 28rpx;
+  border: 1rpx solid #eee3da;
+  border-radius: 24rpx;
+  background: #fff;
 }
+
 .logo {
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 26rpx;
-  background: #ffdfc8;
-  color: #d95425;
-  font-size: 48rpx;
-  font-weight: 800;
   display: flex;
+  width: 96rpx;
+  height: 96rpx;
+  flex: none;
   align-items: center;
   justify-content: center;
+  border-radius: 22rpx;
+  background: #ffe0c9;
+  color: #ad431f;
+  font-size: 44rpx;
+  font-weight: 800;
 }
+
 .shop-main {
+  min-width: 0;
   flex: 1;
   margin-left: 24rpx;
 }
+
 .shop-name {
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
   font-size: 30rpx;
+  font-weight: 700;
 }
+
 .open {
-  font-size: 20rpx;
-  color: #42a56c;
-  background: #e4f6ea;
-  padding: 5rpx 12rpx;
-  border-radius: 20rpx;
-  margin-left: 10rpx;
+  padding: 4rpx 10rpx;
+  border-radius: 8rpx;
+  background: #e4f3e8;
+  color: #28794a;
+  font-size: 19rpx;
+  font-weight: 500;
 }
+
 .notice {
+  overflow: hidden;
+  margin-top: 11rpx;
+  color: #665d57;
   font-size: 24rpx;
-  color: #6f655e;
-  margin-top: 12rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 .meta {
+  margin-top: 9rpx;
+  color: #8d837c;
   font-size: 21rpx;
-  color: #aaa;
-  margin-top: 10rpx;
 }
+
 .arrow {
-  font-size: 46rpx;
-  color: #bbb;
-}
-.empty {
-  text-align: center;
-  color: #aaa;
-  padding: 80rpx 0;
+  margin-left: 12rpx;
+  color: #8e837b;
+  font-size: 44rpx;
 }
 </style>

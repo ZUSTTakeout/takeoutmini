@@ -4,8 +4,10 @@
   "private": true,
   "description": "校园美食街：微信小程序与统一后端，不包含 H5 / App",
   "scripts": {
-    "setup": "npm --prefix apps/api install && npm --prefix apps/miniapp install",
+    "setup": "npm --prefix apps/api ci && npm --prefix apps/api run prisma:generate && npm --prefix apps/miniapp ci",
+    "db:push": "node scripts/prisma-db-push.mjs",
     "build": "npm --prefix apps/api run build && npm --prefix apps/miniapp run build:mp-weixin",
+    "lint": "npm --prefix apps/api run lint && npm --prefix apps/miniapp run lint && npm --prefix apps/api run typecheck && npm --prefix apps/miniapp run typecheck && node --check scripts/smoke.mjs && node --check scripts/prisma-db-push.mjs",
     "dev:api": "npm --prefix apps/api run start:dev",
     "dev:miniapp": "npm --prefix apps/miniapp run dev:mp-weixin",
     "test:api": "npm --prefix apps/api test",

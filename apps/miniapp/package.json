@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin"
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "lint": "eslint \"src/**/*.{ts,vue}\"",
+    "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5020620260917001",
@@ -15,7 +17,17 @@
   "devDependencies": {
     "@dcloudio/types": "3.4.31",
     "@dcloudio/vite-plugin-uni": "3.0.0-5020620260917001",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.0",
+    "eslint-plugin-vue": "^10.11.0",
+    "globals": "^17.12.0",
     "typescript": "^5.9.2",
-    "vite": "5.2.8"
+    "vite": "5.2.8",
+    "vue-tsc": "3.3.11",
+    "typescript-eslint": "^8.70.1"
+  },
+  "overrides": {
+    "postcss": "8.5.28",
+    "ws": "8.21.3"
   }
 }

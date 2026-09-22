@@ -1,92 +1,120 @@
 generator client {
- provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
+
 datasource db {
- provider = "mysql"
- url = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
+
 enum Role {
- STUDENT
- MERCHANT
- ADMIN
+  STUDENT
+  MERCHANT
+  ADMIN
 }
+
 enum OrderStatus {
- CREATED
- ACCEPTED
- READY
- COMPLETED
- CANCELLED
+  CREATED
+  ACCEPTED
+  READY
+  COMPLETED
+  CANCELLED
 }
+
 model User {
- id String @id @default(cuid())
- nickname String
- role Role
- shopId String?
- shop Shop? @relation(fields: [shopId], references: [id])
- orders Order[]
- createdAt DateTime @default(now())
+  id            String   @id @default(cuid()) @db.VarChar(30)
+  nickname      String   @db.VarChar(60)
+  role          Role
+  shopId        String?  @db.VarChar(30)
+  shop          Shop?    @relation("ShopMerchants", fields: [shopId], references: [id], onDelete: SetNull)
+  ownedShop     Shop?    @relation("ShopOwner")
+  wechatOpenId  String?  @unique @db.VarChar(128)
+  wechatUnionId String?  @unique @db.VarChar(128)
+  devLoginKey   String?  @unique @db.VarChar(64)
+  orders        Order[]
+  createdAt     DateTime @default(now())
+
+  @@index([role])
+  @@index([shopId])
 }
+
 model Shop {
- id String @id @default(cuid())
- name String
- notice String @default("欢迎光临")
- description String?
- isOpen Boolean @default(true)
- ownerId String? @unique
- categories Category[]
- products Product[]
- orders Order[]
- merchants User[]
- createdAt DateTime @default(now())
+  id          String     @id @default(cuid()) @db.VarChar(30)
+  name        String     @db.VarChar(60)
+  notice      String     @default("欢迎光临") @db.VarChar(200)
+  description String?    @db.VarChar(500)
+  isOpen      Boolean    @default(true)
+  ownerId     String?    @unique @db.VarChar(30)
+  owner       User?      @relation("ShopOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  categories  Category[]
+  products    Product[]
+  orders      Order[]
+  merchants   User[]     @relation("ShopMerchants")
+  createdAt   DateTime   @default(now())
+
+  @@index([isOpen, createdAt])
 }
+
 model Category {
- id String @id @default(cuid())
- name String
- shopId String
- shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
- products Product[]
- @@index([shopId])
+  id       String    @id @default(cuid()) @db.VarChar(30)
+  name     String    @db.VarChar(30)
+  shopId   String    @db.VarChar(30)
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([shopId, name])
+  @@index([shopId])
 }
+
 model Product {
- id String @id @default(cuid())
- name String
- price Int
- stock Int @default(0)
- description String?
- image String?
- isAvailable Boolean @default(true)
- shopId String
- shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
- categoryId String
- category Category @relation(fields: [categoryId], references: [id])
- orderItems OrderItem[]
- createdAt DateTime @default(now())
- @@index([shopId, categoryId])
+  id          String      @id @default(cuid()) @db.VarChar(30)
+  name        String      @db.VarChar(60)
+  price       Int
+  stock       Int         @default(0)
+  description String?     @db.VarChar(500)
+  image       String?     @db.VarChar(2048)
+  isAvailable Boolean     @default(true)
+  shopId      String      @db.VarChar(30)
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  categoryId  String      @db.VarChar(30)
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+
+  @@index([shopId, isAvailable, categoryId])
+  @@index([categoryId])
 }
+
 model Order {
- id String @id @default(cuid())
- number String @unique
- status OrderStatus @default(CREATED)
- total Int
- remark String?
- studentId String
- student User @relation(fields: [studentId], references: [id])
- shopId String
- shop Shop @relation(fields: [shopId], references: [id])
- items OrderItem[]
- idempotencyKey String @unique
- createdAt DateTime @default(now())
- updatedAt DateTime @updatedAt
- @@index([studentId, createdAt])
- @@index([shopId])
+  id             String      @id @default(cuid()) @db.VarChar(30)
+  number         String      @unique @db.VarChar(40)
+  status         OrderStatus @default(CREATED)
+  total          Int
+  remark         String?     @db.VarChar(200)
+  studentId      String      @db.VarChar(30)
+  student        User        @relation(fields: [studentId], references: [id])
+  shopId         String      @db.VarChar(30)
+  shop           Shop        @relation(fields: [shopId], references: [id])
+  items          OrderItem[]
+  idempotencyKey String      @db.VarChar(128)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([studentId, idempotencyKey])
+  @@index([studentId, createdAt])
+  @@index([shopId, status, createdAt])
 }
+
 model OrderItem {
- id String @id @default(cuid())
- orderId String
- order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
- productId String
- product Product @relation(fields: [productId], references: [id])
- name String
- price Int
- quantity Int
+  id        String  @id @default(cuid()) @db.VarChar(30)
+  orderId   String  @db.VarChar(30)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String  @db.VarChar(30)
+  product   Product @relation(fields: [productId], references: [id])
+  name      String  @db.VarChar(60)
+  price     Int
+  quantity  Int
+
+  @@index([orderId])
+  @@index([productId])
 }
