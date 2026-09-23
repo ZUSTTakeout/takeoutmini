@@ -31,6 +31,34 @@ function Import-ProjectEnv {
       [Environment]::SetEnvironmentVariable($name, $value, 'Process')
     }
   }
+
+  # Keep older local .env files usable while the checked-in example uses the
+  # DATABASE_* names. Compose supports the same fallback values.
+  $legacyMappings = @{
+    DATABASE_NAME     = 'MYSQL_DATABASE'
+    DATABASE_USER     = 'MYSQL_USER'
+    DATABASE_PASSWORD = 'MYSQL_PASSWORD'
+  }
+  foreach ($target in $legacyMappings.Keys) {
+    $current = [Environment]::GetEnvironmentVariable($target, 'Process')
+    $legacy = [Environment]::GetEnvironmentVariable($legacyMappings[$target], 'Process')
+    if ([string]::IsNullOrWhiteSpace($current) -and -not [string]::IsNullOrWhiteSpace($legacy)) {
+      [Environment]::SetEnvironmentVariable($target, $legacy, 'Process')
+    }
+  }
+
+  if (
+    [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('DATABASE_HOST', 'Process')) -and
+    -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('MYSQL_DATABASE', 'Process'))
+  ) {
+    [Environment]::SetEnvironmentVariable('DATABASE_HOST', '127.0.0.1', 'Process')
+  }
+  if (
+    [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('DATABASE_PORT', 'Process')) -and
+    -not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('MYSQL_DATABASE', 'Process'))
+  ) {
+    [Environment]::SetEnvironmentVariable('DATABASE_PORT', '13306', 'Process')
+  }
 }
 
 function Assert-ProjectEnv {

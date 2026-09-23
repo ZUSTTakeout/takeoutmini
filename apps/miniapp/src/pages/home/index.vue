@@ -33,7 +33,7 @@ onShow(load);
   <view class="page">
     <view class="section-head">
       <view>
-        <view class="title">附近店铺</view>
+        <view class="title">营业店铺</view>
         <view class="subtitle">到店自取</view>
       </view>
       <text v-if="!loading && !error" class="count">{{ shops.length }} 家营业中</text>
@@ -43,7 +43,7 @@ onShow(load);
       :loading="loading"
       :error="error"
       :empty="!loading && !error && shops.length === 0"
-      empty-text="附近暂时没有营业店铺"
+      empty-text="暂时没有营业店铺"
       action-text="重新加载"
       @action="load"
     />
@@ -63,7 +63,7 @@ onShow(load);
           <text class="open">营业中</text>
         </view>
         <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
-        <view class="meta">校园自取 · 约 15 分钟</view>
+        <view class="meta">校园自取</view>
       </view>
       <text class="arrow">›</text>
     </view>

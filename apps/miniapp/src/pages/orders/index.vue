@@ -91,8 +91,17 @@ onShow(load);
 <template>
   <view class="page">
     <view class="page-head">
-      <view class="title">我的订单</view>
-      <view class="subtitle">订单状态会在这里更新</view>
+      <view class="head-row">
+        <view class="title">我的订单</view>
+        <button
+          class="refresh"
+          :disabled="loading"
+          @click="load"
+        >
+          刷新状态
+        </button>
+      </view>
+      <view class="subtitle">打开订单页时刷新状态</view>
     </view>
 
     <StateView :loading="loading" />
@@ -148,6 +157,22 @@ onShow(load);
 
 .page-head {
   padding: 12rpx 4rpx 24rpx;
+}
+
+.head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.refresh {
+  flex: none;
+  margin: 0;
+  padding: 0 14rpx;
+  background: transparent;
+  color: #a43e1d;
+  font-size: 23rpx;
 }
 
 .title {

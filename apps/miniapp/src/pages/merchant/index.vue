@@ -13,8 +13,8 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
 };
 const ACTION_TEXT: Partial<Record<OrderStatus, string>> = {
   CREATED: "接单并开始制作",
-  ACCEPTED: "出餐并通知取餐",
-  READY: "确认已取餐",
+  ACCEPTED: "标记为待取餐",
+  READY: "标记为已完成",
 };
 
 const shop = ref<Shop | null>(null);
@@ -160,7 +160,10 @@ onShow(load);
         </view>
       </view>
 
-      <view class="section-title">待处理订单</view>
+      <view class="section-head">
+        <view class="section-title">待处理订单</view>
+        <button class="refresh" :disabled="loading" @click="load">刷新订单</button>
+      </view>
       <StateView
         :empty="pendingOrders.length === 0"
         empty-text="暂无待处理订单"
@@ -264,6 +267,21 @@ onShow(load);
   margin: 8rpx 0 18rpx;
   font-size: 31rpx;
   font-weight: 700;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.refresh {
+  flex: none;
+  margin: 0 0 10rpx;
+  padding: 0 14rpx;
+  background: transparent;
+  color: #a43e1d;
+  font-size: 23rpx;
 }
 
 .order {

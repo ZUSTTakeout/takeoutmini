@@ -20,10 +20,13 @@ export class ShopsController {
   @Get(":id")
   async getOne(@Param() params: IdParamDto) {
     const shop = await this.prisma.shop.findFirst({
-      where: { id: params.id, isOpen: true },
+      // Keep a shop visible after it closes so the client can show its
+      // current state and disable checkout instead of turning the page into
+      // a misleading "not found" error.
+      where: { id: params.id },
       select: publicShopSelect,
     });
-    if (!shop) throw new NotFoundException("店铺不存在或未营业");
+    if (!shop) throw new NotFoundException("店铺不存在");
     return shop;
   }
 }
