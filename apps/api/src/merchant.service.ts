@@ -60,6 +60,16 @@ export class MerchantService {
     });
   }
 
+  async getOrder(user: AuthenticatedUser, orderId: string) {
+    const shopId = await this.ownedShopId(user);
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, shopId },
+      select: orderResponseSelect,
+    });
+    if (!order) throw new NotFoundException("订单不存在");
+    return order;
+  }
+
   async stats(user: AuthenticatedUser) {
     const shopId = await this.ownedShopId(user);
     const [completedOrders, revenue, productCount] = await Promise.all([

@@ -43,6 +43,14 @@ export class MerchantController {
     return this.merchant.updateShop(user, body);
   }
 
+  @Get("orders/:id")
+  getOrder(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param() params: IdParamDto,
+  ) {
+    return this.merchant.getOrder(user, params.id);
+  }
+
   @Get("orders")
   listOrders(@CurrentUser() user: AuthenticatedUser) {
     return this.merchant.listOrders(user);

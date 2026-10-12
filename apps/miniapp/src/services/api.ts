@@ -42,6 +42,7 @@ export class ApiError extends Error {
 
 let token = "";
 let currentUser: User | null = null;
+let sessionExpiryModalVisible = false;
 
 function isUser(value: unknown): value is User {
   if (!value || typeof value !== "object") return false;
@@ -65,6 +66,23 @@ function clearSession() {
   currentUser = null;
   uni.removeStorageSync(TOKEN_KEY);
   uni.removeStorageSync(USER_KEY);
+}
+
+function showSessionExpiredGuide() {
+  if (sessionExpiryModalVisible) return;
+  sessionExpiryModalVisible = true;
+  uni.showModal({
+    title: "登录状态已失效",
+    content: "请重新登录后继续。购物车和已填写的订单备注会保留。",
+    confirmText: "去登录",
+    cancelText: "稍后再说",
+    success: ({ confirm }) => {
+      if (confirm) uni.switchTab({ url: "/pages/profile/index" });
+    },
+    complete: () => {
+      sessionExpiryModalVisible = false;
+    },
+  });
 }
 
 function saveSession(auth: AuthResponse) {
@@ -107,6 +125,7 @@ function request<T>(path: string, config: RequestConfig = {}) {
         }
         if (response.statusCode === 401 && authenticated && token === requestToken) {
           clearSession();
+          showSessionExpiredGuide();
         }
         reject(
           new ApiError(
@@ -192,6 +211,8 @@ export const api = {
       authenticated: false,
     }),
   orders: () => request<Order[]>("/orders"),
+  order: (id: string) =>
+    request<Order>(`/orders/${encodeURIComponent(id)}`),
   createOrder: (data: CreateOrderInput) =>
     request<Order>("/orders", { method: "POST", data }),
   cancelOrder: (id: string) =>
@@ -201,6 +222,8 @@ export const api = {
     }),
   merchantShop: () => request<Shop>("/merchant/shop"),
   merchantOrders: () => request<Order[]>("/merchant/orders"),
+  merchantOrder: (id: string) =>
+    request<Order>(`/merchant/orders/${encodeURIComponent(id)}`),
   merchantStats: () => request<MerchantStats>("/merchant/stats"),
   merchantStatus: (id: string, status: OrderStatus) =>
     request<Order>(`/orders/${encodeURIComponent(id)}/status`, {
@@ -221,7 +244,14 @@ export const api = {
       data: { name },
     }),
   money(value: number) {
-    const amount = Number.isFinite(value) ? value : 0;
-    return `¥${(amount / 100).toFixed(2)}`;
+    // API prices and order totals are integer fen; convert to yuan only here.
+    if (!Number.isSafeInteger(value) || value < 0) {
+      console.error(
+        "[金额格式化] 预期收到以分为单位的非负安全整数，实际值：",
+        value,
+      );
+      return "¥—";
+    }
+    return `¥${(value / 100).toFixed(2)}`;
   },
 };

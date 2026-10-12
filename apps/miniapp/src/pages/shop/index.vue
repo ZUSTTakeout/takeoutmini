@@ -139,6 +139,11 @@ onShow(syncCart);
         </text>
       </view>
 
+      <view v-if="!shop.isOpen" class="closed-banner">
+        <text class="closed-title">店铺休息中，暂时无法加购</text>
+        <text class="closed-note">可以先浏览菜单，营业后再下单</text>
+      </view>
+
       <scroll-view v-if="shop.categories.length" scroll-x class="tabs">
         <text
           :class="['tab', { active: selectedCategory === '' }]"
@@ -209,7 +214,7 @@ onShow(syncCart);
 
 <style scoped>
 .page {
-  padding: 30rpx 32rpx 180rpx;
+  padding: 30rpx 32rpx calc(var(--fixed-action-clearance) + env(safe-area-inset-bottom));
 }
 
 .head {
@@ -272,10 +277,28 @@ onShow(syncCart);
 
 .tabs {
   box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 5;
   width: 100%;
-  margin: 6rpx 0 20rpx;
+  margin: 6rpx -32rpx 20rpx;
+  padding: 0 32rpx;
+  background: #fffaf4;
   white-space: nowrap;
 }
+
+.closed-banner {
+  display: flex;
+  margin: -14rpx 0 22rpx;
+  padding: 18rpx 20rpx;
+  flex-direction: column;
+  border-left: 6rpx solid #8e837b;
+  border-radius: 10rpx;
+  background: #f0ece8;
+}
+
+.closed-title { color: #554c46; font-size: 23rpx; font-weight: 700; }
+.closed-note { margin-top: 5rpx; color: #81766e; font-size: 20rpx; }
 
 .tab {
   display: inline-block;
@@ -287,8 +310,8 @@ onShow(syncCart);
 }
 
 .tab.active {
-  border-bottom-color: #c4532b;
-  color: #a43e1d;
+  border-bottom-color: var(--color-brand);
+  color: var(--color-brand-strong);
   font-weight: 700;
 }
 
@@ -338,7 +361,7 @@ onShow(syncCart);
 }
 
 .price {
-  color: #b84320;
+  color: var(--color-brand-strong);
   font-size: 29rpx;
   font-weight: 700;
 }
@@ -354,7 +377,7 @@ onShow(syncCart);
   margin: 0;
   padding: 0;
   border-radius: 50%;
-  background: #c4532b;
+  background: var(--color-brand);
   color: #fff;
   font-size: 34rpx;
   line-height: 54rpx;
@@ -395,7 +418,7 @@ onShow(syncCart);
   height: 70rpx;
   margin: 0;
   padding: 0 32rpx;
-  background: #d65d30;
+  background: var(--color-brand);
   color: #fff;
   font-size: 26rpx;
   line-height: 70rpx;

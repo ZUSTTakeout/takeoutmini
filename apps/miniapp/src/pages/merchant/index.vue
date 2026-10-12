@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onHide, onShow, onUnload } from "@dcloudio/uni-app";
 import StateView from "../../components/StateView.vue";
 import { ApiError, api, getErrorMessage } from "../../services/api";
 import type { MerchantStats, Order, OrderStatus, Shop } from "../../types";
@@ -29,6 +29,8 @@ const error = ref("");
 const needsMerchantLogin = ref(false);
 const toggling = ref(false);
 const updatingOrderId = ref("");
+let pollTimer: ReturnType<typeof setInterval> | undefined;
+let knownOrderIds: Set<string> | undefined;
 
 const pendingOrders = computed(() =>
   orders.value.filter((order) => ACTIVE_STATUSES.includes(order.status)),
@@ -36,6 +38,16 @@ const pendingOrders = computed(() =>
 
 function goLogin() {
   uni.switchTab({ url: "/pages/profile/index" });
+}
+
+function openProducts() {
+  uni.navigateTo({ url: "/pages/merchant/products" });
+}
+
+function openOrder(order: Order) {
+  uni.navigateTo({
+    url: `/pages/orders/detail?id=${encodeURIComponent(order.id)}&merchant=1`,
+  });
 }
 
 async function load() {
@@ -62,6 +74,8 @@ async function load() {
     shop.value = shopResult;
     orders.value = orderResult;
     stats.value = statsResult;
+    knownOrderIds = new Set(orderResult.map((order) => order.id));
+    updateOrdersBadge(orderResult);
   } catch (reason: unknown) {
     shop.value = null;
     orders.value = [];
@@ -115,7 +129,52 @@ async function advance(order: Order) {
   }
 }
 
-onShow(load);
+function updateOrdersBadge(orderList: Order[]) {
+  const count = orderList.filter((order) => order.status === "CREATED").length;
+  if (count) {
+    uni.setTabBarBadge({ index: 1, text: count > 99 ? "99+" : String(count) });
+  } else {
+    uni.removeTabBarBadge({ index: 1 });
+  }
+}
+
+async function pollOrders() {
+  if (loading.value || !api.isRole("MERCHANT")) return;
+  try {
+    const latest = await api.merchantOrders();
+    const knownIds = knownOrderIds;
+    const hasNewOrder = Boolean(
+      knownIds &&
+      latest.some((order) => order.status === "CREATED" && !knownIds.has(order.id)),
+    );
+    orders.value = latest;
+    knownOrderIds = new Set(latest.map((order) => order.id));
+    updateOrdersBadge(latest);
+    if (hasNewOrder) {
+      uni.vibrateShort({ type: "medium" });
+      uni.showToast({ title: "收到新订单", icon: "none" });
+    }
+  } catch {
+    // Keep the last known order list visible; manual refresh remains available.
+  }
+}
+
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = undefined;
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => void pollOrders(), 10_000);
+}
+
+onShow(() => {
+  void load();
+  startPolling();
+});
+onHide(stopPolling);
+onUnload(stopPolling);
 </script>
 
 <template>
@@ -160,6 +219,14 @@ onShow(load);
         </view>
       </view>
 
+      <view class="manage-entry" role="button" @click="openProducts">
+        <view>
+          <view class="manage-title">商品与分类管理</view>
+          <view class="manage-caption">编辑价格、库存和上架状态</view>
+        </view>
+        <text class="manage-arrow">›</text>
+      </view>
+
       <view class="section-head">
         <view class="section-title">待处理订单</view>
         <button class="refresh" :disabled="loading" @click="load">刷新订单</button>
@@ -169,7 +236,7 @@ onShow(load);
         empty-text="暂无待处理订单"
       />
 
-      <view v-for="order in pendingOrders" :key="order.id" class="order">
+      <view v-for="order in pendingOrders" :key="order.id" class="order" @click="openOrder(order)">
         <view class="order-top">
           <text class="order-number">#{{ order.number.slice(-6) }}</text>
           <text class="total">{{ api.money(order.total) }}</text>
@@ -180,7 +247,7 @@ onShow(load);
         <button
           class="order-action"
           :disabled="Boolean(updatingOrderId)"
-          @click="advance(order)"
+          @click.stop="advance(order)"
         >
           {{ updatingOrderId === order.id ? "更新中…" : ACTION_TEXT[order.status] }}
         </button>
@@ -269,6 +336,33 @@ onShow(load);
   font-weight: 700;
 }
 
+.manage-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 32rpx;
+  padding: 24rpx;
+  border: 1rpx solid #eee3da;
+  border-radius: 22rpx;
+  background: #fff;
+}
+
+.manage-title {
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.manage-caption {
+  margin-top: 7rpx;
+  color: #81766e;
+  font-size: 21rpx;
+}
+
+.manage-arrow {
+  color: var(--color-brand-strong);
+  font-size: 42rpx;
+}
+
 .section-head {
   display: flex;
   align-items: center;
@@ -280,7 +374,7 @@ onShow(load);
   margin: 0 0 10rpx;
   padding: 0 14rpx;
   background: transparent;
-  color: #a43e1d;
+  color: var(--color-brand-strong);
   font-size: 23rpx;
 }
 
@@ -303,7 +397,7 @@ onShow(load);
 }
 
 .total {
-  color: #b84320;
+  color: var(--color-brand-strong);
 }
 
 .items {
@@ -315,7 +409,7 @@ onShow(load);
 
 .order-action {
   height: 72rpx;
-  background: #c4532b;
+  background: var(--color-brand);
   color: #fff;
   font-size: 25rpx;
   line-height: 72rpx;

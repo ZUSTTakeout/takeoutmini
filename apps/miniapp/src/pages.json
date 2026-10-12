@@ -41,6 +41,18 @@
             "style": {
                 "navigationBarTitleText": "商户工作台"
             }
+        },
+        {
+            "path": "pages/merchant/products",
+            "style": {
+                "navigationBarTitleText": "商品管理"
+            }
+        },
+        {
+            "path": "pages/orders/detail",
+            "style": {
+                "navigationBarTitleText": "订单详情"
+            }
         }
     ],
     "tabBar": {
@@ -50,15 +62,21 @@
         "list": [
             {
                 "pagePath": "pages/home/index",
-                "text": "点餐"
+                "text": "点餐",
+                "iconPath": "static/tabbar/home.png",
+                "selectedIconPath": "static/tabbar/home-active.png"
             },
             {
                 "pagePath": "pages/orders/index",
-                "text": "订单"
+                "text": "订单",
+                "iconPath": "static/tabbar/orders.png",
+                "selectedIconPath": "static/tabbar/orders-active.png"
             },
             {
                 "pagePath": "pages/profile/index",
-                "text": "我的"
+                "text": "我的",
+                "iconPath": "static/tabbar/profile.png",
+                "selectedIconPath": "static/tabbar/profile-active.png"
             }
         ]
     }

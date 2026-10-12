@@ -1,0 +1,19 @@
+:root {
+  --color-brand: #c4532b;
+  --color-brand-strong: #a43e1d;
+  --color-brand-soft: #fff0e5;
+  --color-text: #2d2824;
+  --color-text-secondary: #81766e;
+  --color-border: #eee3da;
+  --color-success: #28794a;
+  --color-danger: #b23b34;
+  --radius-control: 14rpx;
+  --radius-card: 22rpx;
+  --radius-panel: 28rpx;
+  --fixed-action-clearance: 132rpx;
+  --space-page-x: 32rpx;
+  --space-card: 24rpx;
+  --font-body: 24rpx;
+  --font-caption: 21rpx;
+  --font-title: 42rpx;
+}

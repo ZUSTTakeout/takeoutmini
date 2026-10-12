@@ -54,6 +54,7 @@ export interface Order {
   status: OrderStatus;
   total: number;
   createdAt: string;
+  updatedAt?: string;
   remark?: string | null;
   shop: { id: string; name: string };
   items: OrderItem[];

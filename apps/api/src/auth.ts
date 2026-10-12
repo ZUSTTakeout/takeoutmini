@@ -44,8 +44,12 @@ export const CurrentUser = createParamDecorator(
 
 function requiredJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("JWT_SECRET 必须配置为至少 32 个字符");
+  if (
+    !secret ||
+    secret.length < 32 ||
+    secret === "change_me_to_at_least_32_random_characters"
+  ) {
+    throw new Error("JWT_SECRET 必须配置为至少 32 个字符的随机密钥，不能使用示例值");
   }
   return secret;
 }

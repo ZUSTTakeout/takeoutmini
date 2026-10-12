@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园美食街：从未连接到可交付</title>
+  <style>
+    :root{--ink:#19324d;--muted:#5e7185;--line:#9eb5c8;--blue:#e8f3ff;--blue2:#2d78c8;--green:#e9f8ef;--green2:#2d9a5b;--amber:#fff4dc;--amber2:#c98216;--red:#fff0ee;--red2:#cc5548;--paper:#f7fafc}
+    *{box-sizing:border-box} body{margin:0;background:var(--paper);font-family:"Microsoft YaHei",system-ui,sans-serif;color:var(--ink)}
+    main{max-width:1400px;margin:0 auto;padding:36px 34px 46px} h1{margin:0 0 8px;font-size:30px} .lead{margin:0 0 28px;color:var(--muted);font-size:16px}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 24px;color:var(--muted);font-size:13px}.legend span{display:flex;align-items:center;gap:7px}.dot{width:13px;height:13px;border-radius:4px;display:inline-block;border:1px solid #b7c7d4}.d-blue{background:var(--blue);border-color:#8ebce8}.d-green{background:var(--green);border-color:#8bc8a3}.d-amber{background:var(--amber);border-color:#e3bd72}.d-red{background:var(--red);border-color:#e0a49d}
+    .flow{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.lane{background:white;border:1px solid #d6e1ea;border-radius:18px;padding:22px;box-shadow:0 8px 24px #24496b12}.lane h2{font-size:20px;margin:0 0 18px}.step{position:relative;border:1px solid #c9d9e5;border-radius:13px;padding:14px 16px;margin:0 0 25px;background:#fff}.step:last-child{margin-bottom:0}.step:after{content:"↓";position:absolute;left:50%;bottom:-25px;transform:translateX(-50%);font-size:20px;color:var(--line)}.step:last-child:after{display:none}.step h3{font-size:16px;margin:0 0 6px}.step p{font-size:13px;line-height:1.65;color:var(--muted);margin:0}.blue{background:var(--blue);border-color:#9fc7e9}.green{background:var(--green);border-color:#a6d5b7}.amber{background:var(--amber);border-color:#e5c37d}.red{background:var(--red);border-color:#e0aaa4}.tag{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;margin-bottom:8px;font-weight:700}.blue .tag{background:#d1e8ff;color:var(--blue2)}.green .tag{background:#d1f0dc;color:var(--green2)}.amber .tag{background:#ffe8b2;color:var(--amber2)}.red .tag{background:#ffd8d3;color:var(--red2)}
+    .footer{margin-top:26px;background:#19324d;color:#fff;border-radius:15px;padding:18px 20px;font-size:14px;line-height:1.7}.footer strong{color:#bfe3ff}.note{margin-top:18px;color:var(--muted);font-size:12px}
+    @media(max-width:850px){main{padding:24px 16px}.flow{grid-template-columns:1fr}h1{font-size:24px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>校园美食街：从“无法连接服务器”到可交付</h1>
+  <p class="lead">这张图把问题、修复、上线和交付串成一条线。截图里的“未连接”属于运行结果，不是操作指令。</p>
+  <div class="legend"><span><i class="dot d-blue"></i>检查 / 配置</span><span><i class="dot d-green"></i>通过后继续</span><span><i class="dot d-amber"></i>需要准备</span><span><i class="dot d-red"></i>当前阻塞</span></div>
+  <section class="flow">
+    <div class="lane">
+      <h2>一、本地恢复连接</h2>
+      <div class="step red"><span class="tag">当前现象</span><h3>微信开发者工具显示“无法连接服务器”</h3><p>页面能打开，但店铺数据加载失败。说明前端在运行，接口没有回应。</p></div>
+      <div class="step blue"><span class="tag">检查 1</span><h3>确认接口地址</h3><p>项目默认请求 <b>http://localhost:3000/api</b>。它只对当前电脑有效，不能直接给别人使用。</p></div>
+      <div class="step blue"><span class="tag">检查 2</span><h3>启动数据库和 API</h3><p>需要 MySQL + NestJS API。项目提供 <b>scripts/start-local.ps1</b>，但当前电脑的 Docker 尚不可用。</p></div>
+      <div class="step amber"><span class="tag">准备依赖</span><h3>安装并启动 Docker Desktop</h3><p>启动后再次运行本地启动脚本；如果不使用 Docker，就要单独安装 MySQL 并配置连接参数。</p></div>
+      <div class="step green"><span class="tag">验证</span><h3>打开健康检查地址</h3><p>访问 <b>http://127.0.0.1:3000/api/health/live</b>。能返回成功，才说明 API 已启动。</p></div>
+      <div class="step green"><span class="tag">验证</span><h3>重新编译并导入微信开发者工具</h3><p>构建 <b>apps/miniapp/dist/build/mp-weixin</b>，然后重新编译、刷新预览。</p></div>
+    </div>
+    <div class="lane">
+      <h2>二、比赛 / 校方交付</h2>
+      <div class="step blue"><span class="tag">先做演示版</span><h3>完成核心功能验收</h3><p>逐项测试：登录、店铺、商品、购物车、下单、订单取消、商户订单处理。</p></div>
+      <div class="step amber"><span class="tag">上线准备</span><h3>部署真实后端和数据库</h3><p>把 API 和 MySQL 部署到服务器，不能继续使用 localhost。准备固定服务器和备份策略。</p></div>
+      <div class="step amber"><span class="tag">微信配置</span><h3>改成 HTTPS 域名并配置合法域名</h3><p>例如 <b>https://你的域名/api</b>。在微信公众平台配置 request 合法域名。</p></div>
+      <div class="step amber"><span class="tag">账号配置</span><h3>填写真实 AppID / AppSecret</h3><p>当前项目的微信配置为空，开发登录只适合本地演示，正式交付前必须完成真实登录联调。</p></div>
+      <div class="step green"><span class="tag">交付方式</span><h3>上传体验版给评委或老师</h3><p>微信开发者工具上传代码，在公众平台生成体验版二维码，供比赛和校方试用。</p></div>
+      <div class="step green"><span class="tag">交付材料</span><h3>同时提交完整资料包</h3><p>小程序源码、后端源码、数据库说明、部署说明、测试账号、功能说明、演示视频和体验版二维码。</p></div>
+    </div>
+  </section>
+  <div class="footer"><strong>现在最先做的事：</strong>先解决本地 API 启动问题；本地能稳定显示店铺和商品后，再做服务器部署和微信正式配置。只把源码压缩包发出去，别人无法直接运行这个小程序。</div>
+  <p class="note">依据当前项目状态整理：API 端口 3000 未监听；本地配置默认使用 localhost；Docker 当前不可用；正式环境还需要 HTTPS、合法域名和真实微信配置。</p>
+</main>
+</body>
+</html>

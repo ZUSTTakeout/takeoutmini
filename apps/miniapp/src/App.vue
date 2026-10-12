@@ -6,15 +6,17 @@ onLaunch(() => api.restore());
 </script>
 
 <style>
+@import "./styles/theme.css";
+
 page {
   min-height: 100%;
   background: #fffaf4;
-  color: #2d2824;
+  color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
 button {
-  border-radius: 16rpx;
+  border-radius: var(--radius-control);
 }
 
 button::after {

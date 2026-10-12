@@ -21,8 +21,20 @@ describe("database configuration", () => {
     );
   });
 
+  test("supports the MYSQL_* variables used by the local environment", () => {
+    expect(
+      databaseUrlFromEnv({
+        MYSQL_DATABASE: "campus_food",
+        MYSQL_USER: "campus",
+        MYSQL_PASSWORD: "local-pass",
+      }),
+    ).toBe(
+      "mysql://campus:local-pass@127.0.0.1:13306/campus_food",
+    );
+  });
+
   test("rejects missing or malformed server parameters", () => {
-    expect(() => databaseUrlFromEnv({})).toThrow("DATABASE_HOST 必须配置");
+    expect(() => databaseUrlFromEnv({})).toThrow("DATABASE_NAME 必须配置");
     expect(() =>
       databaseUrlFromEnv({
         DATABASE_HOST: "localhost",

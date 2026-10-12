@@ -2,6 +2,7 @@ import type { CartItem, Product } from "../types";
 
 const CART_PREFIX = "cart:";
 const CHECKOUT_PREFIX = "checkout:";
+const REMARK_PREFIX = "checkout-remark:";
 const MAX_QUANTITY = 99;
 
 interface CheckoutAttempt {
@@ -15,6 +16,29 @@ function cartKey(shopId: string) {
 
 function checkoutKey(shopId: string) {
   return `${CHECKOUT_PREFIX}${shopId}`;
+}
+
+function remarkKey(shopId: string) {
+  return `${REMARK_PREFIX}${shopId}`;
+}
+
+export function loadCheckoutRemark(shopId: string) {
+  if (!shopId) return "";
+  const saved = uni.getStorageSync(remarkKey(shopId));
+  return typeof saved === "string" ? saved.slice(0, 200) : "";
+}
+
+export function saveCheckoutRemark(shopId: string, remark: string) {
+  if (!shopId) return;
+  if (!remark) {
+    uni.removeStorageSync(remarkKey(shopId));
+    return;
+  }
+  uni.setStorageSync(remarkKey(shopId), remark.slice(0, 200));
+}
+
+export function clearCheckoutRemark(shopId: string) {
+  if (shopId) uni.removeStorageSync(remarkKey(shopId));
 }
 
 function validItem(value: unknown): value is CartItem {
@@ -50,11 +74,15 @@ export function saveCart(shopId: string, items: CartItem[]) {
   uni.setStorageSync(cartKey(shopId), items);
 }
 
-export function reconcileCart(items: CartItem[], products: Product[]) {
+export function reconcileCartWithRemoved(items: CartItem[], products: Product[]) {
   const productsById = new Map(products.map((product) => [product.id, product]));
-  return items.flatMap((item) => {
+  const removed: CartItem[] = [];
+  const next = items.flatMap((item) => {
     const product = productsById.get(item.productId);
-    if (!product?.isAvailable || product.stock < 1) return [];
+    if (!product?.isAvailable || product.stock < 1) {
+      removed.push(item);
+      return [];
+    }
     return [
       {
         productId: product.id,
@@ -65,6 +93,11 @@ export function reconcileCart(items: CartItem[], products: Product[]) {
       },
     ];
   });
+  return { items: next, removed };
+}
+
+export function reconcileCart(items: CartItem[], products: Product[]) {
+  return reconcileCartWithRemoved(items, products).items;
 }
 
 function fingerprint(shopId: string, items: CartItem[], remark: string) {

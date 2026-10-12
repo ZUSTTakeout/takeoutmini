@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onHide, onShow, onUnload } from "@dcloudio/uni-app";
 import StateView from "../../components/StateView.vue";
 import { ApiError, api, getErrorMessage } from "../../services/api";
 import type { Order, OrderStatus } from "../../types";
@@ -18,6 +18,25 @@ const loading = ref(false);
 const error = ref("");
 const needsStudentLogin = ref(false);
 const cancellingId = ref("");
+let pollTimer: ReturnType<typeof setInterval> | undefined;
+
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = undefined;
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (!loading.value && orders.value.some((order) =>
+      ["CREATED", "ACCEPTED", "READY"].includes(order.status),
+    )) void load();
+  }, 10_000);
+}
+
+function openDetail(order: Order) {
+  uni.navigateTo({ url: `/pages/orders/detail?id=${encodeURIComponent(order.id)}` });
+}
 
 function goLogin() {
   uni.switchTab({ url: "/pages/profile/index" });
@@ -72,9 +91,10 @@ async function cancel(order: Order) {
   if (cancellingId.value) return;
   cancellingId.value = order.id;
   try {
-    await api.cancelOrder(order.id);
+    const updated = await api.cancelOrder(order.id);
+    const index = orders.value.findIndex((item) => item.id === order.id);
+    if (index >= 0) orders.value.splice(index, 1, updated);
     uni.showToast({ title: "订单已取消" });
-    await load();
   } catch (reason: unknown) {
     uni.showToast({
       title: getErrorMessage(reason, "取消失败，请稍后重试"),
@@ -85,7 +105,12 @@ async function cancel(order: Order) {
   }
 }
 
-onShow(load);
+onShow(() => {
+  void load();
+  startPolling();
+});
+onHide(stopPolling);
+onUnload(stopPolling);
 </script>
 
 <template>
@@ -124,6 +149,7 @@ onShow(load);
       v-show="!loading && !error"
       :key="order.id"
       class="order"
+      @click="openDetail(order)"
     >
       <view class="order-top">
         <view>
@@ -141,7 +167,7 @@ onShow(load);
           v-if="order.status === 'CREATED'"
           class="cancel-action"
           role="button"
-          @click="requestCancel(order)"
+          @click.stop="requestCancel(order)"
         >
           {{ cancellingId === order.id ? "取消中…" : "取消订单" }}
         </text>
@@ -171,7 +197,7 @@ onShow(load);
   margin: 0;
   padding: 0 14rpx;
   background: transparent;
-  color: #a43e1d;
+  color: var(--color-brand-strong);
   font-size: 23rpx;
 }
 
@@ -213,7 +239,7 @@ onShow(load);
 }
 
 .status {
-  color: #a43e1d;
+  color: var(--color-brand-strong);
   font-size: 24rpx;
   font-weight: 700;
 }
@@ -231,7 +257,7 @@ onShow(load);
 }
 
 .total {
-  color: #b84320;
+  color: var(--color-brand-strong);
   font-size: 29rpx;
   font-weight: 700;
 }

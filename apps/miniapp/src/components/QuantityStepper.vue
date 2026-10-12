@@ -54,7 +54,7 @@ function increase() {
   margin: 0;
   padding: 0;
   border-radius: 50%;
-  background: #c4532b;
+  background: var(--color-brand);
   color: #fff;
   font-size: 34rpx;
   line-height: 54rpx;

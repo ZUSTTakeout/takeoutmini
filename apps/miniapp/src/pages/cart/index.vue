@@ -3,16 +3,21 @@ import { computed, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import QuantityStepper from "../../components/QuantityStepper.vue";
 import StateView from "../../components/StateView.vue";
-import { api, getErrorMessage } from "../../services/api";
+import { ApiError, api, getErrorMessage } from "../../services/api";
 import {
   clearCheckoutAttempt,
+  clearCheckoutRemark,
   findCheckoutAttempt,
   getCheckoutAttempt,
+  loadCheckoutRemark,
   loadCart,
   reconcileCart,
   saveCart,
+  saveCheckoutRemark,
 } from "../../services/cart";
 import type { CartItem, Shop } from "../../types";
+
+type MiniappTextareaEvent = Event & { detail?: { value?: unknown } };
 
 const items = ref<CartItem[]>([]);
 const shop = ref<Shop | null>(null);
@@ -70,6 +75,13 @@ function changeQuantity(item: CartItem, nextQuantity: number) {
   saveCart(shopId.value, items.value);
 }
 
+function updateRemark(event: MiniappTextareaEvent) {
+  const value = event.detail?.value;
+  if (typeof value !== "string") return;
+  remark.value = value.slice(0, 200);
+  saveCheckoutRemark(shopId.value, remark.value);
+}
+
 function requestStudentLogin() {
   uni.showModal({
     title: "需要学生身份",
@@ -119,7 +131,7 @@ async function submit() {
         remark.value,
       );
     }
-    await api.createOrder({
+    const order = await api.createOrder({
       shopId: shopId.value,
       items: items.value.map((item) => ({
         productId: item.productId,
@@ -131,14 +143,25 @@ async function submit() {
     });
     saveCart(shopId.value, []);
     clearCheckoutAttempt(shopId.value);
+    clearCheckoutRemark(shopId.value);
     items.value = [];
-    uni.showToast({ title: "下单成功" });
-    setTimeout(() => uni.switchTab({ url: "/pages/orders/index" }), 500);
-  } catch (reason: unknown) {
-    uni.showToast({
-      title: getErrorMessage(reason, "下单失败，请稍后重试"),
-      icon: "none",
+    remark.value = "";
+    uni.showModal({
+      title: "下单成功",
+      content: `订单 ${order.number} 已提交，可在订单页查看进度。`,
+      confirmText: "查看订单",
+      cancelText: "留在当前页",
+      success: ({ confirm }) => {
+        if (confirm) uni.switchTab({ url: "/pages/orders/index" });
+      },
     });
+  } catch (reason: unknown) {
+    if (!(reason instanceof ApiError && reason.statusCode === 401)) {
+      uni.showToast({
+        title: getErrorMessage(reason, "下单失败，请稍后重试"),
+        icon: "none",
+      });
+    }
   } finally {
     submitting.value = false;
   }
@@ -147,6 +170,7 @@ async function submit() {
 onLoad((query) => {
   shopId.value = typeof query?.shopId === "string" ? query.shopId : "";
   items.value = loadCart(shopId.value);
+  remark.value = loadCheckoutRemark(shopId.value);
   void load();
 });
 </script>
@@ -193,12 +217,14 @@ onLoad((query) => {
         </view>
 
         <textarea
-          v-model="remark"
+          :value="remark"
           class="remark"
           :disabled="submitting"
           :maxlength="200"
           placeholder="备注口味或取餐要求（选填）"
+          @input="updateRemark"
         />
+        <view class="remark-count">{{ remark.length }}/200</view>
       </view>
 
       <view v-if="items.length" class="bottom-bar">
@@ -220,7 +246,7 @@ onLoad((query) => {
 
 <style scoped>
 .page {
-  padding: 30rpx 32rpx 190rpx;
+  padding: 30rpx 32rpx calc(var(--fixed-action-clearance) + env(safe-area-inset-bottom));
 }
 
 .pickup {
@@ -228,12 +254,12 @@ onLoad((query) => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx;
-  border-left: 7rpx solid #c4532b;
+  border-left: 7rpx solid var(--color-brand);
   background: #fff0e5;
 }
 
 .pickup-title {
-  color: #a43e1d;
+  color: var(--color-brand-strong);
   font-size: 28rpx;
   font-weight: 700;
 }
@@ -285,7 +311,7 @@ onLoad((query) => {
 
 .item-price {
   margin-top: 8rpx;
-  color: #b84320;
+  color: var(--color-brand-strong);
   font-size: 24rpx;
 }
 
@@ -296,9 +322,16 @@ onLoad((query) => {
   margin-top: 24rpx;
   padding: 20rpx;
   border: 1rpx solid #e5d8ce;
-  border-radius: 12rpx;
+  border-radius: var(--radius-control);
   background: #fffaf6;
   font-size: 25rpx;
+}
+
+.remark-count {
+  margin-top: 8rpx;
+  color: #8d837c;
+  font-size: 20rpx;
+  text-align: right;
 }
 
 .bottom-bar {
@@ -332,7 +365,7 @@ onLoad((query) => {
   height: 72rpx;
   margin: 0;
   padding: 0 30rpx;
-  background: #d65d30;
+  background: var(--color-brand);
   color: #fff;
   font-size: 25rpx;
   line-height: 72rpx;
