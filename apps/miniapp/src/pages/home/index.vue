@@ -36,7 +36,10 @@ onShow(load);
         <view class="title">营业店铺</view>
         <view class="subtitle">到店自取</view>
       </view>
-      <text v-if="!loading && !error" class="count">{{ shops.length }} 家营业中</text>
+      <text v-if="!loading && !error" class="count">
+        <text class="ri ri-store-2-line count-icon" aria-hidden="true" />
+        {{ shops.length }} 家营业中
+      </text>
     </view>
 
     <StateView
@@ -65,7 +68,7 @@ onShow(load);
         <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
         <view class="meta">校园自取</view>
       </view>
-      <text class="arrow">›</text>
+      <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
     </view>
   </view>
 </template>
@@ -100,6 +103,8 @@ onShow(load);
 .count {
   padding-bottom: 4rpx;
 }
+
+.count-icon { margin-right: 6rpx; color: var(--color-brand); }
 
 .shop-row {
   display: flex;
@@ -166,6 +171,6 @@ onShow(load);
 .arrow {
   margin-left: 12rpx;
   color: #8e837b;
-  font-size: 44rpx;
+  font-size: 34rpx;
 }
 </style>

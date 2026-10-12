@@ -38,7 +38,91 @@ export class AuthController {
       body.role === Role.MERCHANT
         ? await this.getOrCreateDevMerchant()
         : await this.getOrCreateDevStudent();
+    if (body.role === Role.MERCHANT && user.shopId) {
+      await this.ensureDemoCatalog(user.id, user.shopId);
+    }
     return this.authResponse(user);
+  }
+
+  private async ensureDemoCatalog(userId: string, shopId: string): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const shop = await transaction.shop.findFirst({
+        where: { id: shopId, ownerId: userId },
+        select: { id: true },
+      });
+      if (!shop) return;
+
+      const categories = await Promise.all(
+        ["热销主食", "校园小吃", "清爽饮品"].map((name) =>
+          transaction.category.upsert({
+            where: { shopId_name: { shopId, name } },
+            create: { shopId, name },
+            update: {},
+            select: { id: true, name: true },
+          }),
+        ),
+      );
+      const productCount = await transaction.product.count({
+        where: { shopId },
+      });
+      if (productCount > 0) return;
+
+      const categoryId = new Map(
+        categories.map((category) => [category.name, category.id]),
+      );
+      await transaction.product.createMany({
+        data: [
+          {
+            shopId,
+            categoryId: categoryId.get("热销主食")!,
+            name: "香煎鸡排饭",
+            price: 1800,
+            stock: 30,
+            description: "现煎鸡排搭配时蔬与米饭 · 演示商品",
+          },
+          {
+            shopId,
+            categoryId: categoryId.get("热销主食")!,
+            name: "番茄牛腩饭",
+            price: 2200,
+            stock: 20,
+            description: "番茄慢炖牛腩，酸甜开胃 · 演示商品",
+          },
+          {
+            shopId,
+            categoryId: categoryId.get("校园小吃")!,
+            name: "脆皮炸鸡块",
+            price: 1200,
+            stock: 25,
+            description: "外酥里嫩，适合分享 · 演示商品",
+          },
+          {
+            shopId,
+            categoryId: categoryId.get("校园小吃")!,
+            name: "手作饭团",
+            price: 800,
+            stock: 18,
+            description: "紫菜包裹米饭与精选馅料 · 演示商品",
+          },
+          {
+            shopId,
+            categoryId: categoryId.get("清爽饮品")!,
+            name: "柠檬气泡水",
+            price: 600,
+            stock: 40,
+            description: "清爽柠檬风味 · 演示商品",
+          },
+          {
+            shopId,
+            categoryId: categoryId.get("清爽饮品")!,
+            name: "桂花酸梅汤",
+            price: 700,
+            stock: 30,
+            description: "酸甜解腻，冰镇更佳 · 演示商品",
+          },
+        ],
+      });
+    });
   }
 
   @Post("wechat")

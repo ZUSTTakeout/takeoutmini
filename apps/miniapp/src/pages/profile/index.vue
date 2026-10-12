@@ -92,31 +92,31 @@ onShow(syncUser);
 
     <view class="menu">
       <view class="line" role="button" @click="wechatLogin">
-        <text class="line-icon">微</text>
+        <text class="ri ri-wechat-line line-icon wechat" aria-hidden="true" />
         <text class="line-label">{{ busyAction === "wechat" ? "登录中…" : "微信登录" }}</text>
-        <text class="arrow">›</text>
+        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
       </view>
       <template v-if="api.devAuthEnabled">
         <view class="line" role="button" @click="roleLogin('STUDENT')">
-          <text class="line-icon student">学</text>
+          <text class="ri ri-graduation-cap-line line-icon student" aria-hidden="true" />
           <text class="line-label">{{ busyAction === "STUDENT" ? "登录中…" : "学生登录" }}</text>
-          <text class="arrow">›</text>
+          <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
         </view>
         <view class="line" role="button" @click="roleLogin('MERCHANT')">
-          <text class="line-icon merchant">店</text>
+          <text class="ri ri-store-2-line line-icon merchant" aria-hidden="true" />
           <text class="line-label">{{ busyAction === "MERCHANT" ? "登录中…" : "商户登录" }}</text>
-          <text class="arrow">›</text>
+          <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
         </view>
       </template>
       <view v-if="user?.role === 'MERCHANT'" class="line" role="button" @click="openMerchant">
-        <text class="line-icon workspace">台</text>
+        <text class="ri ri-dashboard-line line-icon workspace" aria-hidden="true" />
         <text class="line-label">商户工作台</text>
-        <text class="arrow">›</text>
+        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
       </view>
       <view v-if="user" class="line last-line" role="button" @click="requestLogout">
-        <text class="line-icon logout">退</text>
+        <text class="ri ri-logout-box-r-line line-icon logout" aria-hidden="true" />
         <text class="line-label logout-label">退出登录</text>
-        <text class="arrow">›</text>
+        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
       </view>
     </view>
   </view>
@@ -199,6 +199,10 @@ onShow(syncUser);
   font-weight: 700;
 }
 
+.line-icon { font-size: 27rpx; }
+
+.line-icon.wechat { background: #3e8a58; }
+
 .line-icon.student {
   background: #3f6f9e;
 }
@@ -225,6 +229,6 @@ onShow(syncUser);
 
 .arrow {
   color: #8e837b;
-  font-size: 40rpx;
+  font-size: 32rpx;
 }
 </style>
