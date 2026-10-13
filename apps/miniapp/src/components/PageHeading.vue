@@ -6,8 +6,7 @@ withDefaults(defineProps<{ title: string; eyebrow?: string; meta?: string }>(), 
 <template>
   <view class="page-heading motion-enter">
     <view class="heading-main">
-      <text v-if="eyebrow" class="heading-eyebrow">{{ eyebrow }}</text>
-      <text class="heading-title">{{ title }}</text>
+            <text class="heading-title">{{ title }}</text>
       <text v-if="meta" class="heading-meta">{{ meta }}</text>
     </view>
     <view class="heading-actions"><slot /></view>
@@ -15,10 +14,10 @@ withDefaults(defineProps<{ title: string; eyebrow?: string; meta?: string }>(), 
 </template>
 
 <style scoped>
-.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 5px 0 22px; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 32rpx; padding: var(--space-1) 0 var(--space-3); }
 .heading-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.heading-eyebrow { margin-bottom: 7px; color: var(--color-brand); font-size: 10px; font-weight: 700; letter-spacing: 2px; line-height: 1.5; }
-.heading-title { color: var(--color-text); font-size: var(--font-title); font-weight: 800; letter-spacing: -0.5px; line-height: 1.35; overflow-wrap: anywhere; }
-.heading-meta { margin-top: 8px; color: var(--color-text-secondary); font-size: 12px; line-height: 1.5; }
-.heading-actions { display: flex; flex: none; align-items: center; gap: 8px; }
+.heading-eyebrow { margin-bottom: 14rpx; color: var(--color-brand); font-size: var(--font-caption); font-weight: 700; letter-spacing: 4rpx; line-height: 1.5; }
+.heading-title { color: var(--color-text); font-size: var(--font-title); font-weight: 800; letter-spacing: -1rpx; line-height: 1.35; overflow-wrap: anywhere; }
+.heading-meta { margin-top: var(--space-1); color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 1.5; }
+.heading-actions { display: flex; flex: none; align-items: center; gap: 16rpx; }
 </style>

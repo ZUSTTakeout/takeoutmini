@@ -5,11 +5,11 @@
   "scripts": {
     "predev:mp-weixin": "npm run ui:prepare",
     "dev:mp-weixin": "uni -p mp-weixin",
-    "ui:prepare": "node scripts/prepare-vant.mjs",
+    "ui:prepare": "node scripts/generate-icons.mjs && node scripts/prepare-vant.mjs",
     "icons:generate": "node scripts/generate-icons.mjs",
     "prebuild:mp-weixin": "npm run ui:prepare",
     "build:mp-weixin": "uni build -p mp-weixin",
-    "lint": "eslint \"src/**/*.{ts,vue}\"",
+    "lint": "eslint \"src/**/*.{ts,vue}\" && vue-tsc --noEmit",
     "typecheck": "vue-tsc --noEmit",
     "prebuild:mock": "npm run ui:prepare",
     "build:mock": "node scripts/build-mock.mjs",

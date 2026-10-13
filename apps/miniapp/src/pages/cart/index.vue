@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import PageHeading from "../../components/PageHeading.vue";
+import PageFrame from "../../components/PageFrame.vue";
 import CartItemRow from "../../components/CartItemRow.vue";
 import ProductSuggestion from "../../components/ProductSuggestion.vue";
 import BusinessStatus from "../../components/BusinessStatus.vue";
-import FoodImage from "../../components/FoodImage.vue";
 import ReIcon from "../../components/ReIcon.vue";
 import IconButton from "../../components/IconButton.vue";
 import CheckoutBar from "../../components/CheckoutBar.vue";
+import { useScrollRefresh } from "../../composables/useRefresh";
 import { formatMoney } from "../../utils/format";
 import { computed, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
@@ -35,6 +35,7 @@ const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
 const confirming = ref(false);
+const contentTop = ref(0);
 const itemCount = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0));
 const productImages = computed(() => new Map(shop.value?.products.map((product) => [product.id, product.image]) || []));
 const suggestions = computed(() => shop.value?.products.filter((product) =>
@@ -44,7 +45,7 @@ const suggestions = computed(() => shop.value?.products.filter((product) =>
 function setStage(checkout: boolean) {
   confirming.value = checkout;
   uni.setNavigationBarTitle({ title: checkout ? "确认订单" : "购物车" });
-  uni.pageScrollTo({ scrollTop: 0, duration: 0 });
+  contentTop.value = contentTop.value === 0 ? 1 : 0;
 }
 function addSuggestion(product: Product) {
   if (!shop.value?.isOpen || submitting.value) return;
@@ -54,7 +55,7 @@ function addSuggestion(product: Product) {
 function clearCart() {
   if (submitting.value) return;
   uni.showModal({
-    title: "清空购物车", content: "确定移除全部商品吗？", confirmColor: "#ad477a",
+    title: "清空购物车", content: "确定移除全部商品吗？",
     success: ({ confirm }) => {
       if (!confirm) return;
       items.value = [];
@@ -81,14 +82,13 @@ function goMenu() {
   });
 }
 
-async function load() {
+async function load(silent = false) {
   if (!shopId.value) {
     loading.value = false;
     error.value = "购物车地址无效";
     return;
   }
-  loading.value = true;
-  error.value = "";
+  if (!silent) { loading.value = true; error.value = ""; }
   try {
     const result = await api.shop(shopId.value);
     if (!result) throw new Error("店铺不存在或已下线");
@@ -96,11 +96,16 @@ async function load() {
     items.value = reconcileCart(loadCart(shopId.value), result.products);
     saveCart(shopId.value, items.value);
   } catch (reason: unknown) {
-    error.value = getErrorMessage(reason, "购物车加载失败，请稍后重试");
+    const message = getErrorMessage(reason, "购物车加载失败，请稍后重试");
+    if (silent) uni.showToast({ title: message, icon: "none" });
+    else error.value = message;
   } finally {
-    loading.value = false;
+    if (!silent) loading.value = false;
   }
 }
+const { refreshing, onRefresh } = useScrollRefresh(async () => {
+  if (!submitting.value) await load(Boolean(shop.value));
+});
 
 function changeQuantity(item: CartItem, nextQuantity: number) {
   const index = items.value.findIndex(
@@ -125,7 +130,7 @@ function requestStudentLogin() {
     content: "请先登录学生账号后再提交订单。",
     confirmText: "去登录",
     success: ({ confirm }) => {
-      if (confirm) uni.switchTab({ url: "/pages/profile/index" });
+      if (confirm) uni.navigateTo({ url: "/pages/profile/login" });
     },
   });
 }
@@ -214,69 +219,57 @@ onLoad((query) => {
 </script>
 
 <template>
-  <view class="app-page with-dock">
-    <PageHeading :title="confirming ? '确认订单' : '购物车'" :eyebrow="shop?.name || '食巷'" :meta="items.length ? `共 ${itemCount} 份商品` : ''">
-      <IconButton v-if="confirming" name="edit" label="修改购物车" variant="secondary" :disabled="submitting" @click="setStage(false)" />
-      <IconButton v-else-if="items.length" name="close" label="清空购物车" variant="danger" :disabled="submitting" @click="clearCart" />
-    </PageHeading>
-    <StateView :loading="loading" :error="error" action-text="重新加载" @action="load" />
-    <template v-if="!loading && !error">
-      <StateView :empty="items.length === 0" empty-text="购物车还是空的" action-text="返回点餐" @action="goMenu" />
-      <template v-if="items.length">
-        <view class="checkout-stages">
-          <view :class="['stage', { current: !confirming }]"><text class="stage-number">01</text><text>购物车</text></view>
-          <view class="stage-divider" />
-          <view :class="['stage', { current: confirming }]"><text class="stage-number">02</text><text>确认订单</text></view>
-        </view>
-        <view v-if="!confirming" class="cart-content motion-enter">
-          <view class="surface items-surface">
-            <CartItemRow v-for="item in items" :key="item.productId" :item="item" :image="productImages.get(item.productId)" :disabled="submitting || !shop?.isOpen" @change="changeQuantity(item, $event)" />
-          </view>
-          <template v-if="suggestions.length && shop?.isOpen">
-            <view class="section-row"><text class="section-label">再加一道</text><ReIcon name="restaurant" color="danger" :size="19" /></view>
-            <view class="suggestion-list"><view v-for="product in suggestions" :key="product.id" class="suggestion-column motion-item"><ProductSuggestion :product="product" @add="addSuggestion(product)" /></view></view>
-          </template>
-        </view>
-        <view v-else class="confirmation-content motion-enter">
-          <view v-if="shop" class="surface pickup-section">
-            <view class="pickup-method"><ReIcon name="bag" color="brand" :size="21" /><text>到店自取</text><ReIcon name="check" color="brand" :size="18" /></view>
-            <view class="pickup-shop"><FoodImage :src="shop.products.find((product) => product.image)?.image" :size="54" icon="store" /><view class="pickup-shop-main"><text class="shop-name">{{ shop.name }}</text><BusinessStatus :open="shop.isOpen" /></view></view>
-          </view>
-          <view class="section-row"><text class="section-label">商品明细</text><text class="section-meta">{{ itemCount }} 份</text></view>
-          <view class="surface items-surface">
-            <CartItemRow v-for="item in items" :key="item.productId" :item="item" :image="productImages.get(item.productId)" readonly />
-            <view class="order-total"><text>合计</text><text>{{ formatMoney(total) }}</text></view>
-          </view>
-          <view class="form-section">
-            <text class="form-label">订单备注</text>
-            <textarea :value="remark" class="form-input remark" :disabled="submitting" :maxlength="200" placeholder="口味偏好、取餐要求（选填）" aria-label="订单备注" @input="updateRemark" />
-            <view class="character-count">{{ remark.length }}/200</view>
-          </view>
-        </view>
-      </template>
+  <PageFrame>
+    <template #header>
+      <view v-if="shop && !loading && !error" class="shop-strip">
+        <view class="shop-heading"><text class="shop-name">{{ shop.name }}</text><IconButton v-if="items.length" :name="confirming ? 'edit' : 'close'" :label="confirming ? '修改商品' : '清空购物车'" :disabled="submitting" compact @click="confirming ? setStage(false) : clearCart()" /></view>
+        <BusinessStatus :open="shop.isOpen" />
+        <view class="pickup-line"><ReIcon name="bag" :size="14" /><text>到店自取，请等餐点备好后到店取餐</text></view>
+      </view>
     </template>
-    <CheckoutBar v-if="!loading && !error && items.length" :count="itemCount" :total="total" :name="confirming ? 'check' : 'arrow-right'" :label="confirming ? '提交订单' : '确认商品'" :loading="submitting" :disabled="submitting || !shop?.isOpen" @action="confirming ? submit() : setStage(true)" />
-  </view>
+    <scroll-view class="cart-scroll" scroll-y :scroll-top="contentTop" :refresher-enabled="!submitting" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
+      <view class="cart-body">
+        <StateView :loading="loading" :error="error" skeleton="card" action-text="重试" @action="load()" />
+        <template v-if="!loading && !error">
+          <StateView :empty="items.length === 0" empty-text="购物车还是空的，先选点想吃的吧" action-text="去点餐" @action="goMenu" />
+          <template v-if="items.length">
+            <view class="content-heading"><text class="section-label">{{ confirming ? '确认商品' : '已选商品' }}</text><text class="section-meta">{{ itemCount }} 份</text></view>
+            <view class="item-list">
+              <CartItemRow v-for="item in items" :key="item.productId" :item="item" :image="productImages.get(item.productId)" :readonly="confirming" :disabled="submitting || !shop?.isOpen" @change="changeQuantity(item, $event)" />
+              <view v-if="confirming" class="order-total"><text>合计</text><text>{{ formatMoney(total) }}</text></view>
+            </view>
+            <view class="remark-section">
+              <view class="remark-heading"><text class="section-label">备注</text><text class="character-count">{{ remark.length }}/200</text></view>
+              <textarea :value="remark" class="form-input form-textarea remark" :disabled="submitting" :maxlength="200" placeholder="口味偏好、取餐要求（选填）" aria-label="订单备注" @input="updateRemark" />
+            </view>
+            <template v-if="!confirming && suggestions.length && shop?.isOpen">
+              <view class="section-row"><text class="section-label">再加一道</text></view>
+              <view class="suggestion-list"><view v-for="product in suggestions" :key="product.id" class="suggestion-column"><ProductSuggestion :product="product" @add="addSuggestion(product)" /></view></view>
+            </template>
+          </template>
+        </template>
+      </view>
+    </scroll-view>
+    <template v-if="!loading && !error && items.length" #footer>
+      <CheckoutBar :count="itemCount" :total="total" :name="confirming ? 'check' : 'arrow-right'" :label="confirming ? '提交订单' : '确认商品'" :loading="submitting" :disabled="submitting || !shop?.isOpen" @action="confirming ? submit() : setStage(true)" />
+    </template>
+  </PageFrame>
 </template>
-
 <style scoped>
-.checkout-stages { display: flex; align-items: center; gap: 14px; margin: 2px 0 22px; }
-.stage { display: flex; flex: none; align-items: center; gap: 7px; color: var(--color-text-secondary); font-size: 11px; transition: color var(--motion-normal); }
-.stage-number { display: flex; width: 25px; height: 25px; align-items: center; justify-content: center; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-text-secondary); font-size: 10px; }
-.stage.current { color: var(--color-brand); font-weight: 700; }
-.current .stage-number { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-surface); }
-.stage-divider { height: 1px; min-width: 10px; flex: 1; background: var(--color-border); }
-.items-surface { padding: 0 18px; }
-.suggestion-list { display: flex; align-items: stretch; gap: 12px; }
+.shop-strip { padding: var(--space-3) var(--space-4); border-bottom: 2rpx solid var(--color-border); }
+.shop-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-1); }
+.shop-name { min-width: 0; flex: 1; font-size: var(--font-title); font-weight: 700; overflow-wrap: anywhere; }
+.pickup-line { display: flex; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-2); color: var(--color-text-secondary); font-size: var(--font-caption); }
+.pickup-line text { min-width: 0; flex: 1; }
+.cart-scroll { height: 0; flex: 1; min-height: 0; }
+.cart-body { --content-clearance: var(--space-3); padding: var(--space-3) var(--space-4) calc(var(--content-clearance) + env(safe-area-inset-bottom)); }
+.content-heading, .remark-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
+.item-list { padding: 0 var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
+.order-total { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; font-size: var(--font-body); }
+.order-total text:last-child { color: var(--color-brand); font-size: var(--font-title); font-weight: 700; }
+.remark-section { margin-top: var(--space-4); }
+.character-count { margin: 0; }
+.remark { height: 160rpx; padding: var(--space-3); background: var(--color-surface); }
+.suggestion-list { display: flex; align-items: stretch; gap: var(--space-3); }
 .suggestion-column { min-width: 0; flex: 1; }
-.pickup-section { padding: 18px; }
-.pickup-method { display: flex; align-items: center; gap: 9px; color: var(--color-brand); font-size: 14px; font-weight: 700; }
-.pickup-method text { min-width: 0; flex: 1; }
-.pickup-shop { display: flex; align-items: center; gap: 13px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
-.pickup-shop-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 7px; }
-.shop-name { color: var(--color-text); font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
-.order-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: 12px; }
-.order-total text:last-child { color: var(--color-accent); font-size: 20px; font-weight: 750; }
-.remark { height: 112px; }
-@media (prefers-reduced-motion: reduce) { .stage { transition: none; } }
 </style>

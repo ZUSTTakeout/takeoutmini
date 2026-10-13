@@ -17,10 +17,10 @@ const focused = ref(false);
 </template>
 
 <style scoped>
-.search-field { display: flex; min-height: 48px; box-sizing: border-box; align-items: center; gap: 10px; padding: 0 15px; border: 1px solid var(--color-border); border-radius: 15px; background: var(--color-surface); transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
-.search-field.focused { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-soft); }
-.search-input { min-width: 0; height: 46px; flex: 1; color: var(--color-text); font-size: 13px; }
+.search-field { display: flex; min-height: 96rpx; box-sizing: border-box; align-items: center; gap: 20rpx; padding: 0 30rpx; border: 2rpx solid var(--color-border); border-radius: var(--radius-card); background: var(--color-input); transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+.search-field.focused { border-color: var(--color-brand);  }
+.search-input { min-width: 0; height: 92rpx; flex: 1; color: var(--color-text); font-size: var(--font-body); }
 .search-placeholder { color: var(--color-text-secondary); }
-.search-clear { display: flex; width: 30px; height: 38px; flex: none; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; background: transparent; line-height: 1; }
+.search-clear { display: flex; width: 88rpx; height: 88rpx; flex: none; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; background: transparent; line-height: 1; }
 @media (prefers-reduced-motion: reduce) { .search-field { transition: none; } }
 </style>

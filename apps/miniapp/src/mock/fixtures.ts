@@ -50,7 +50,7 @@ export function createShops(): Shop[] {
       ],
     },
     {
-      id: "mock-soup", name: "巷口汤面 · 手作鲜汤与现拌面", isOpen: true,
+      id: "mock-soup", name: "巷口汤面 · 手作鲜汤与现拌面", isOpen: true, description: "手作鲜汤面与现拌面",
       notice: "二食堂一楼 12 号窗口 · 饭点请预留 10 分钟",
       categories: [{ id: "mock-soup-noodles", name: "鲜汤面" }, { id: "mock-soup-sides", name: "小食" }],
       products: [
@@ -60,7 +60,7 @@ export function createShops(): Shop[] {
       ],
     },
     {
-      id: "mock-garden", name: "青禾轻食", isOpen: true,
+      id: "mock-garden", name: "青禾轻食", isOpen: true, description: "轻食沙拉、谷物碗，酱汁分装",
       notice: "图书馆旁 B2 · 酱汁默认分装",
       categories: [{ id: "mock-garden-salad", name: "轻食沙拉" }, { id: "mock-garden-bowl", name: "谷物碗" }],
       products: [
@@ -70,7 +70,7 @@ export function createShops(): Shop[] {
       ],
     },
     {
-      id: "mock-burger", name: "三明治与汉堡研究所", isOpen: true,
+      id: "mock-burger", name: "三明治与汉堡研究所", isOpen: true, description: "牛肉汉堡与分享套餐",
       notice: "体育馆西门 03 号档口 · 堂食和自取",
       categories: [{ id: "mock-burger-main", name: "汉堡" }, { id: "mock-burger-set", name: "分享套餐" }],
       products: [
@@ -80,7 +80,7 @@ export function createShops(): Shop[] {
       ],
     },
     {
-      id: "mock-coffee", name: "拾光咖啡", isOpen: false,
+      id: "mock-coffee", name: "拾光咖啡", isOpen: false, description: "浓缩咖啡与乌龙茶饮",
       notice: "今日 14:00 开始营业 · 艺术楼一层",
       categories: [{ id: "mock-coffee-cup", name: "咖啡" }, { id: "mock-coffee-milk", name: "茶饮" }],
       products: [

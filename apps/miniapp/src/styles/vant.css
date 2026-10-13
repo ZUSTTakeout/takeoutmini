@@ -1,7 +1,7 @@
-.compact-empty.van-empty { padding: 26px 0; }
-.compact-empty .van-empty__image { height: 60px; width: 60px; }
-.compact-empty .van-empty__description { max-width: 280px; padding: 0 16px; color: var(--color-text-secondary); font-size: 13px; line-height: 22px; }
-.van-popup--bottom { border-radius: 24px 24px 0 0; }
+.compact-empty.van-empty { padding: 52rpx 0; }
+.compact-empty .van-empty__image { height: 120rpx; width: 120rpx; }
+.compact-empty .van-empty__description { max-width: 560rpx; padding: 0 32rpx; color: var(--color-text-secondary); font-size: var(--font-body); line-height: 44rpx; }
+.van-popup--bottom { border-radius: 48rpx 48rpx 0 0; }
 @media (prefers-reduced-motion: reduce) {
   .van-popup, .van-overlay { transition: none !important; animation: none !important; }
 }

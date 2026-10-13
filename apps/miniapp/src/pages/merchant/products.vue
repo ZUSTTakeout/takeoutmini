@@ -8,6 +8,7 @@ import StateView from "../../components/StateView.vue";
 import MerchantNav from "../../components/MerchantNav.vue";
 import MerchantProductEditor from "../../components/MerchantProductEditor.vue";
 import MerchantProductRow from "../../components/MerchantProductRow.vue";
+import { usePullRefresh } from "../../composables/useRefresh";
 import { MOCK_ENABLED } from "../../config/runtime";
 import { api, getErrorMessage } from "../../services/api";
 import { nativeValue } from "../../utils/events";
@@ -37,16 +38,18 @@ const filteredProducts = computed(() => products.value.filter((product) => {
   return stateMatch && (!selectedCategory.value || product.categoryId === selectedCategory.value);
 }));
 
-async function load() {
+async function load(silent = false) {
   if (!api.isRole("MERCHANT")) { error.value = "请使用商户账号登录后管理商品"; return; }
-  loading.value = true;
-  error.value = "";
+  if (!silent) { loading.value = true; error.value = ""; }
   try {
     const [shopResult, categoryResult] = await Promise.all([api.merchantShop(), api.categories()]);
     shop.value = shopResult;
     categories.value = categoryResult;
-  } catch (reason: unknown) { error.value = getErrorMessage(reason, "商品信息加载失败"); }
-  finally { loading.value = false; }
+  } catch (reason: unknown) {
+    if (silent) uni.showToast({ title: getErrorMessage(reason, "刷新失败，请稍后再试"), icon: "none" });
+    else error.value = getErrorMessage(reason, "商品信息加载失败");
+  }
+  finally { if (!silent) loading.value = false; }
 }
 
 function addProduct() { editingProduct.value = null; formOpen.value = true; }
@@ -107,7 +110,11 @@ async function saveCategory() {
   } catch (reason: unknown) { uni.showToast({ title: getErrorMessage(reason, "新增分类失败"), icon: "none" }); }
   finally { categorySaving.value = false; }
 }
-onShow(load);
+onShow(() => void load(Boolean(shop.value)));
+usePullRefresh(async () => {
+  if (formOpen.value || categoryOpen.value || saving.value || busyProductId.value) return;
+  await load(Boolean(shop.value));
+});
 </script>
 
 <template>
@@ -115,7 +122,7 @@ onShow(load);
     <PageHeading title="商品管理" :eyebrow="shop?.name || '商户中心'"><IconButton name="add" label="新增商品" variant="primary" :disabled="loading || Boolean(error)" @click="addProduct" /></PageHeading>
     <FilterTabs v-model="active" :items="productTabs" label="商品状态" />
     <StateView :loading="loading" />
-    <StateView v-if="!loading && error" :error="error" action-text="重新加载" @action="load" />
+    <StateView v-if="!loading && error" :error="error" action-text="重新加载" @action="load()" />
     <template v-if="!loading && !error">
       <view class="category-toolbar">
         <scroll-view scroll-x :show-scrollbar="false" class="category-scroll"><view class="categories"><view :class="['category', { selected: !selectedCategory }]" role="button" @click="selectedCategory = ''"><text>全部分类</text></view><view v-for="category in categories" :key="category.id" :class="['category', { selected: selectedCategory === category.id }]" role="button" @click="selectedCategory = category.id"><text>{{ category.name }}</text></view></view></scroll-view>
@@ -128,7 +135,7 @@ onShow(load);
   </view>
   <MerchantNav active="products" />
   <MerchantProductEditor :show="formOpen" :product="editingProduct" :categories="categories" :saving="saving" @close="formOpen = false" @save="saveProduct" @add-category="openCategory" />
-  <van-popup :show="categoryOpen" position="bottom" round :duration="220" :z-index="120" :safe-area-inset-bottom="false" :close-on-click-overlay="!categorySaving" custom-style="background:#ffffff;" @close="!categorySaving && (categoryOpen = false)">
+  <van-popup :show="categoryOpen" position="bottom" round :duration="220" :z-index="120" :safe-area-inset-bottom="false" :close-on-click-overlay="!categorySaving" custom-style="background:var(--color-surface);" @close="!categorySaving && (categoryOpen = false)">
     <view class="category-sheet">
       <view class="category-heading"><IconButton name="close" label="关闭分类编辑" :disabled="categorySaving" @click="categoryOpen = false" /><text class="category-title">新增分类</text><IconButton name="save" label="保存分类" variant="primary" :loading="categorySaving" :disabled="!categoryName.trim()" @click="saveCategory" /></view>
       <text class="form-label">分类名称</text><input class="form-input category-input" :value="categoryName" placeholder="填写分类名称" aria-label="分类名称" :maxlength="30" :disabled="categorySaving" @input="categoryName = nativeValue($event)" />
@@ -137,16 +144,16 @@ onShow(load);
 </template>
 
 <style scoped>
-.category-toolbar { display: flex; align-items: center; gap: 12px; margin: 17px 0 0; }
+.category-toolbar { position: sticky; top: 0; z-index: 3; background: var(--color-background); display: flex; align-items: center; gap: 24rpx; margin: var(--space-3) 0 0; }
 .category-scroll { min-width: 0; flex: 1; white-space: nowrap; }
-.categories { display: inline-flex; align-items: center; gap: 20px; }
-.category { flex: none; padding: 12px 0; border-bottom: 2px solid transparent; color: var(--color-text-secondary); font-size: 11px; line-height: 1.5; transition: color var(--motion-fast), border-color var(--motion-fast); }
+.categories { display: inline-flex; align-items: center; gap: 40rpx; }
+.category { flex: none; padding: 24rpx 0; border-bottom: 4rpx solid transparent; color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 1.5; transition: color var(--motion-fast), border-color var(--motion-fast); }
 .category.selected { border-bottom-color: var(--color-brand); color: var(--color-brand); font-weight: 700; }
-.list-caption { padding-top: 10px; padding-bottom: 6px; }
-.product-list { border-top: 1px solid var(--color-border); }
-.category-sheet { padding: 18px 20px calc(28px + env(safe-area-inset-bottom)); }
-.category-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
-.category-title { color: var(--color-text); font-size: 17px; font-weight: 750; }
-.category-input { height: 49px; }
+.list-caption { padding-top: 20rpx; padding-bottom: 12rpx; }
+.product-list { border-top: 2rpx solid var(--color-border); }
+.category-sheet { padding: 36rpx 40rpx calc(56rpx + env(safe-area-inset-bottom)); }
+.category-heading { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; margin-bottom: 48rpx; }
+.category-title { color: var(--color-text); font-size: var(--font-body); font-weight: 750; }
+.category-input { height: 98rpx; }
 @media (prefers-reduced-motion: reduce) { .category { transition: none; } }
 </style>

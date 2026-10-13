@@ -14,7 +14,7 @@ defineEmits<{ change: [value: number] }>();
 </template>
 
 <style scoped>
-.quantity-stepper { display: flex; flex: none; align-items: center; gap: 2px; }
-.quantity-value { min-width: 24px; color: var(--color-text); font-size: 13px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.quantity-stepper { display: flex; flex: none; align-items: center; gap: 4rpx; }
+.quantity-value { min-width: 48rpx; color: var(--color-text); font-size: var(--font-body); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
 </style>
 

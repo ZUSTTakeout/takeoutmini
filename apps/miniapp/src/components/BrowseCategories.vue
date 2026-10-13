@@ -26,11 +26,11 @@ function categoryIcon(name: string): ReIconName {
 </template>
 
 <style scoped>
-.category-scroll { width: 100%; margin-top: 22px; white-space: nowrap; }
-.browse-categories { display: inline-flex; min-width: 100%; justify-content: space-between; gap: 13px; padding: 2px 0 5px; }
-.browse-category { display: flex; width: 64px; flex: none; flex-direction: column; align-items: center; gap: 9px; }
-.category-icon { display: flex; width: 50px; height: 50px; align-items: center; justify-content: center; border-radius: 16px; background: var(--color-brand-soft); transition: background var(--motion-normal), transform var(--motion-fast); }
-.category-name { display: -webkit-box; width: 64px; min-height: 32px; overflow: hidden; color: var(--color-text-secondary); font-size: 11px; line-height: 16px; text-align: center; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.category-scroll { width: 100%; margin-top: 44rpx; white-space: nowrap; }
+.browse-categories { display: inline-flex; min-width: 100%; justify-content: space-between; gap: 26rpx; padding: 4rpx 0 10rpx; }
+.browse-category { display: flex; width: 128rpx; flex: none; flex-direction: column; align-items: center; gap: 18rpx; }
+.category-icon { display: flex; width: 100rpx; height: 100rpx; align-items: center; justify-content: center; border-radius: var(--radius-card); background: var(--color-brand-soft); transition: background var(--motion-normal), transform var(--motion-fast); }
+.category-name { display: -webkit-box; width: 128rpx; min-height: 64rpx; overflow: hidden; color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 32rpx; text-align: center; white-space: normal; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .tone-1 .category-icon { background: var(--color-accent-soft); }
 .tone-2 .category-icon { background: var(--color-success-soft); }
 .selected .category-icon { background: var(--color-brand); }

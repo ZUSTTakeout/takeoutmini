@@ -12,12 +12,12 @@ defineProps<{ metrics: Array<{ label: string; value: string | number; accent?: b
 </template>
 
 <style scoped>
-.stats-strip { display: flex; padding: 23px 8px; border-radius: var(--radius-card); background: var(--color-text); }
-.metric { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: center; gap: 12px; padding: 0 6px; text-align: center; }
+.stats-strip { display: flex; padding: 46rpx 16rpx; border-radius: var(--radius-card); background: var(--color-surface); }
+.metric { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: center; gap: var(--space-2); padding: 0 12rpx; text-align: center; }
 .metric.wide { flex: 1.8; }
-.metric + .metric { border-left: 1px solid #3f4d6c; }
-.metric-label { color: #b6c2da; font-size: 10px; line-height: 1.5; }
-.metric-value { max-width: 100%; color: var(--color-surface); font-size: 24px; font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-.wide .metric-value { font-size: 20px; }
-.accent { color: #e6b9d0; }
+.metric + .metric { border-left: 2rpx solid var(--color-border); }
+.metric-label { color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 1.5; }
+.metric-value { max-width: 100%; color: var(--color-text); font-size: var(--font-title); font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.wide .metric-value { font-size: var(--font-title); }
+.accent { color: var(--color-text-tertiary); }
 </style>

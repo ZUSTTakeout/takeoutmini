@@ -25,9 +25,9 @@ function go(key: (typeof items)[number]["key"]) {
 </template>
 
 <style scoped>
-.merchant-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 20; display: flex; min-height: 68px; box-sizing: border-box; justify-content: space-around; padding: 8px 15px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
-.nav-item { display: flex; min-width: 60px; flex: 1; flex-direction: column; align-items: center; gap: 3px; color: var(--color-text-secondary); font-size: 10px; }
-.nav-icon { display: flex; width: 42px; height: 32px; align-items: center; justify-content: center; border-radius: 12px; transition: background var(--motion-normal); }
+.merchant-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 20; display: flex; min-height: calc(var(--merchant-nav-clearance) + env(safe-area-inset-bottom)); box-sizing: border-box; justify-content: space-around; padding: 16rpx 30rpx calc(16rpx + env(safe-area-inset-bottom)); border-top: 2rpx solid var(--color-border); background: var(--color-surface); }
+.nav-item { display: flex; min-width: 120rpx; flex: 1; flex-direction: column; align-items: center; gap: 6rpx; color: var(--color-text-secondary); font-size: var(--font-caption); }
+.nav-icon { display: flex; width: 84rpx; height: 64rpx; align-items: center; justify-content: center; border-radius: var(--radius-card); transition: background var(--motion-normal); }
 .active { color: var(--color-brand); font-weight: 650; }
 .active .nav-icon { background: var(--color-brand-soft); }
 .nav-pressed { opacity: 0.7; }

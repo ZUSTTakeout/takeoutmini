@@ -10,8 +10,8 @@ defineProps<{ open: boolean }>();
 </template>
 
 <style scoped>
-.business-status { display: inline-flex; flex: none; align-items: center; gap: 5px; color: var(--color-success); font-size: 10px; font-weight: 650; white-space: nowrap; }
-.status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--color-success); }
+.business-status { display: inline-flex; flex: none; align-items: center; gap: 10rpx; color: var(--color-success); font-size: var(--font-caption); font-weight: 650; white-space: nowrap; }
+.status-dot { width: 10rpx; height: 10rpx; border-radius: 50%; background: var(--color-success); }
 .closed { color: var(--color-text-secondary); }
 .closed .status-dot { background: var(--color-text-secondary); }
 </style>

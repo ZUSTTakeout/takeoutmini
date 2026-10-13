@@ -17,8 +17,8 @@ defineEmits<{ add: [] }>();
 </template>
 
 <style scoped>
-.suggestion { min-width: 0; box-sizing: border-box; padding: 17px 14px 12px; border-radius: var(--radius-card); background: var(--color-surface); }
-.suggestion-name { display: block; margin-top: 12px; color: var(--color-text); font-size: 13px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
-.suggestion-bottom { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; }
-.suggestion-price { min-width: 0; color: var(--color-accent); font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.suggestion { min-width: 0; box-sizing: border-box; padding: 34rpx 28rpx 24rpx; border-radius: var(--radius-card); background: var(--color-surface); }
+.suggestion-name { display: block; margin-top: 24rpx; color: var(--color-text); font-size: var(--font-body); font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.suggestion-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; margin-top: 16rpx; }
+.suggestion-price { min-width: 0; color: var(--color-brand); font-size: var(--font-body); font-weight: 700; overflow-wrap: anywhere; }
 </style>

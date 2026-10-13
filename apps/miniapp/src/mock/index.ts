@@ -97,6 +97,9 @@ export function dispatchMockRequest(path: string, config: MockRequestConfig, use
 
 function missingOrder(): never { throw new ApiError("订单不存在", 404); }
 export async function mockRequest<T>(path: string, config: MockRequestConfig, user: User | null): Promise<T> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 160));
+  const state = uni.getStorageSync("mock:v1:ui-state") as string | undefined;
+  await new Promise<void>((resolve) => setTimeout(resolve, state === "loading" ? 8_000 : 160));
+  if (state === "error") throw new ApiError("暂时连接不上，稍后再试", 503);
+  if (state === "empty" && ["/shops", "/orders", "/merchant/orders"].includes(path) && (!config.method || config.method === "GET")) return [] as T;
   return dispatchMockRequest(path, config, user) as T;
 }

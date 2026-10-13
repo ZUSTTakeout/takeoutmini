@@ -14,8 +14,8 @@ defineEmits<{ action: [] }>();
 </template>
 
 <style scoped>
-.action-dock { position: fixed; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-sizing: border-box; min-height: 80px; padding: 16px 22px calc(16px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
-.action-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
-.action-title { color: var(--color-text); font-size: 14px; font-weight: 700; }
-.action-note { color: var(--color-text-secondary); font-size: 11px; }
+.action-dock { position: fixed; right: 0; bottom: 0; left: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 30rpx; box-sizing: border-box; min-height: 160rpx; padding: 32rpx 44rpx calc(32rpx + env(safe-area-inset-bottom)); border-top: 2rpx solid var(--color-border); background: var(--color-surface); }
+.action-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 8rpx; }
+.action-title { color: var(--color-text); font-size: var(--font-body); font-weight: 700; }
+.action-note { color: var(--color-text-secondary); font-size: var(--font-caption); }
 </style>

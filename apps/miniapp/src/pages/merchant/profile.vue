@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePullRefresh } from "../../composables/useRefresh";
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import PageHeading from "../../components/PageHeading.vue";
@@ -14,40 +15,40 @@ const shop = ref<Shop | null>(null);
 const loading = ref(false);
 const error = ref("");
 function openPage(page: string) { uni.navigateTo({ url: `/pages/merchant/${page}` }); }
-async function load() {
+async function load(silent = false) {
   if (!api.isRole("MERCHANT")) { error.value = "请先登录商户账号"; return; }
-  loading.value = true;
-  error.value = "";
+  if (!silent) { loading.value = true; error.value = ""; }
   try { shop.value = await api.merchantShop(); }
-  catch (reason: unknown) { error.value = getErrorMessage(reason, "店铺信息加载失败"); }
-  finally { loading.value = false; }
+  catch (reason: unknown) {
+    if (silent) uni.showToast({ title: getErrorMessage(reason, "刷新失败，请稍后再试"), icon: "none" });
+    else error.value = getErrorMessage(reason, "店铺信息加载失败");
+  }
+  finally { if (!silent) loading.value = false; }
 }
-function logout() {
-  uni.showModal({ title: "退出登录", content: "确定退出当前商户账号吗？", confirmColor: "#ad477a", success: ({ confirm }) => { if (!confirm) return; api.logout(); uni.switchTab({ url: "/pages/profile/index" }); } });
-}
-onShow(load);
+function openAccount() { uni.navigateTo({ url: "/pages/profile/account" }); }
+onShow(() => void load(Boolean(shop.value)));
+usePullRefresh(() => load(Boolean(shop.value)));
 </script>
 
 <template>
   <view class="app-page merchant-page">
     <PageHeading title="我的店铺" eyebrow="食巷 · 商户中心" />
-    <StateView :loading="loading" :error="error" action-text="重新加载" @action="load" />
+    <StateView :loading="loading" :error="error" action-text="重新加载" @action="load()" />
     <template v-if="shop && !loading && !error">
-      <AccountIdentity :name="shop.name" :label="api.user?.nickname || '商户账号'" :image="shop.products.find((product) => product.image)?.image" merchant><BusinessStatus :open="shop.isOpen" /></AccountIdentity>
+      <AccountIdentity :name="api.user?.nickname || shop.name" :label="shop.name" :image="shop.products.find((product) => product.image)?.image" merchant clickable @open="openAccount"><BusinessStatus :open="shop.isOpen" /></AccountIdentity>
+      <text v-if="shop.description" class="shop-description">{{ shop.description }}</text>
       <view class="group-label">店铺管理</view>
       <view class="surface motion-enter">
-        <MenuRow title="店铺信息" icon="store" @click="openPage('settings')" />
         <MenuRow title="营业设置" icon="settings" color="danger" @click="openPage('settings')" />
         <MenuRow title="商品管理" icon="bag" color="success" @click="openPage('products')" />
         <MenuRow title="订单管理" icon="orders" :border="false" @click="openPage('orders')" />
       </view>
-      <view class="logout-menu surface motion-enter"><MenuRow title="退出登录" icon="logout" danger :border="false" @click="logout" /></view>
     </template>
   </view>
   <MerchantNav active="profile" />
 </template>
 
 <style scoped>
-.group-label { margin: 13px 0 12px 3px; color: var(--color-text-secondary); font-size: 11px; letter-spacing: 1px; }
-.logout-menu { margin-top: 20px; }
+.group-label { margin: 26rpx 0 24rpx 6rpx; color: var(--color-text-secondary); font-size: var(--font-caption); letter-spacing: 2rpx; }
+.shop-description { display: block; margin-bottom: var(--space-4); color: var(--color-text-secondary); font-size: var(--font-body); line-height: 1.6; }
 </style>

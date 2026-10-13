@@ -15,9 +15,9 @@ defineEmits<{ select: [key: string] }>();
 </template>
 
 <style scoped>
-.shortcut-grid { display: flex; gap: 10px; padding: 25px 0; }
-.shortcut { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: center; gap: 11px; color: var(--color-text); font-size: 11px; }
-.shortcut-icon { display: flex; width: 52px; height: 52px; align-items: center; justify-content: center; border-radius: 17px; background: var(--color-brand-soft); transition: transform var(--motion-fast); }
+.shortcut-grid { display: flex; gap: 20rpx; padding: 50rpx 0; }
+.shortcut { display: flex; min-width: 0; flex: 1; flex-direction: column; align-items: center; gap: 22rpx; color: var(--color-text); font-size: var(--font-caption); }
+.shortcut-icon { display: flex; width: 104rpx; height: 104rpx; align-items: center; justify-content: center; border-radius: var(--radius-card); background: var(--color-brand-soft); transition: transform var(--motion-fast); }
 .shortcut-icon.success { background: var(--color-success-soft); }
 .shortcut-icon.danger { background: var(--color-accent-soft); }
 .shortcut-pressed .shortcut-icon { transform: scale(0.94); }

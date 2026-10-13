@@ -15,12 +15,12 @@ const statusNote = computed(() => ({
 <template>
   <view :class="['order-progress', { cancelled: order.status === 'CANCELLED', ready: order.status === 'READY' }]">
     <view class="status-heading">
-      <view class="status-icon"><ReIcon :name="order.status === 'CANCELLED' ? 'close' : order.status === 'COMPLETED' ? 'check' : 'bag'" color="white" :size="29" /></view>
+      <view class="status-icon"><ReIcon :name="order.status === 'CANCELLED' ? 'close' : order.status === 'COMPLETED' ? 'check' : 'bag'" color="brand" :size="26" /></view>
       <view class="status-main"><text class="status-title">{{ STATUS_TEXT[order.status] }}</text><text class="status-note">{{ statusNote }}</text></view>
     </view>
     <view v-if="order.status !== 'CANCELLED'" class="progress-track">
       <view v-for="(step, index) in ORDER_STEPS" :key="step.status" :class="['progress-step', { done: index <= currentStep, current: index === currentStep }]">
-        <view class="step-top"><view class="step-dot"><ReIcon v-if="index < currentStep || order.status === 'COMPLETED'" name="check" color="white" :size="12" /><text v-else>{{ index + 1 }}</text></view><view v-if="index < ORDER_STEPS.length - 1" class="step-line" /></view>
+        <view class="step-top"><view class="step-dot"><ReIcon v-if="index < currentStep || order.status === 'COMPLETED'" name="check" color="inherit" :size="12" /><text v-else>{{ index + 1 }}</text></view><view v-if="index < ORDER_STEPS.length - 1" class="step-line" /></view>
         <text class="step-label">{{ step.label }}</text>
       </view>
     </view>
@@ -28,22 +28,23 @@ const statusNote = computed(() => ({
 </template>
 
 <style scoped>
-.order-progress { margin-bottom: 20px; padding: 24px 21px; border-radius: 22px; background: var(--color-brand-strong); }
-.order-progress.ready { background: #694975; }
-.order-progress.cancelled { background: #66748e; }
-.status-heading { display: flex; align-items: center; gap: 14px; }
-.status-icon { display: flex; width: 52px; height: 52px; flex: none; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.28); border-radius: 17px; }
-.status-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 6px; }
-.status-title { color: var(--color-surface); font-size: 24px; font-weight: 750; line-height: 1.3; }
-.status-note { color: #d4ddf5; font-size: 12px; line-height: 1.6; }
-.progress-track { display: flex; margin-top: 25px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.15); }
+.order-progress { margin-bottom: var(--space-3); padding: var(--space-4); border-radius: var(--radius-panel); background: var(--color-surface); }
+.order-progress.ready { background: var(--color-brand-soft); }
+.order-progress.cancelled { background: var(--color-input); }
+.status-heading { display: flex; align-items: center; gap: 28rpx; }
+.status-icon { display: flex; width: 104rpx; height: 104rpx; flex: none; align-items: center; justify-content: center; border: 2rpx solid var(--color-border); border-radius: var(--radius-card); }
+.status-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 12rpx; }
+.status-title { color: var(--color-text); font-size: var(--font-title); font-weight: 750; line-height: 1.3; }
+.status-note { color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 1.6; }
+.progress-track { display: flex; margin-top: var(--space-4); padding-top: var(--space-3); border-top: 2rpx solid var(--color-border); }
 .progress-step { min-width: 0; flex: 1; }
-.step-top { display: flex; align-items: center; margin-bottom: 9px; }
-.step-dot { display: flex; width: 20px; height: 20px; flex: none; align-items: center; justify-content: center; border: 1px solid #768ac4; border-radius: 50%; color: #a8b8df; font-size: 10px; }
-.step-line { height: 1px; flex: 1; margin: 0 6px; background: #768ac4; }
-.step-label { color: #a8b8df; font-size: 10px; }
-.done .step-dot { border-color: #c3cff7; color: #ffffff; }
-.done .step-label { color: #e8edff; }
-.current .step-dot { background: rgba(255,255,255,0.16); }
-.progress-step:last-child { max-width: 45px; }
+.step-top { display: flex; align-items: center; margin-bottom: 18rpx; }
+.step-dot { display: flex; width: 40rpx; height: 40rpx; flex: none; align-items: center; justify-content: center; border: 2rpx solid var(--color-border); border-radius: 50%; color: var(--color-text-tertiary); font-size: var(--font-caption); }
+.step-line { height: 2rpx; flex: 1; margin: 0 var(--space-1); background: var(--color-border); }
+.done .step-line { background: var(--color-brand); }
+.step-label { color: var(--color-text-tertiary); font-size: var(--font-caption); }
+.done .step-dot { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-surface); }
+.done .step-label { color: var(--color-text); }
+.current .step-dot { border-color: var(--color-brand); background: var(--color-brand); color: var(--color-surface); }
+.progress-step:last-child { max-width: 90rpx; }
 </style>
