@@ -20,6 +20,8 @@ export default tseslint.config(
     },
     rules: {
       "vue/multi-word-component-names": "off",
+      // WeChat native components use named slot attributes, including Vant Weapp.
+      "vue/no-deprecated-slot-attribute": "off",
     },
   },
   {

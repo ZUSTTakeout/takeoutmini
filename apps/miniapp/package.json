@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev:mp-weixin": "npm run ui:prepare",
     "dev:mp-weixin": "uni -p mp-weixin",
+    "ui:prepare": "node scripts/prepare-vant.mjs",
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "prebuild:mp-weixin": "npm run ui:prepare",
     "build:mp-weixin": "uni build -p mp-weixin",
     "lint": "eslint \"src/**/*.{ts,vue}\"",
     "typecheck": "vue-tsc --noEmit"
@@ -12,7 +16,7 @@
     "@dcloudio/uni-app": "3.0.0-5020620260917001",
     "@dcloudio/uni-components": "3.0.0-5020620260917001",
     "@dcloudio/uni-mp-weixin": "3.0.0-5020620260917001",
-    "remixicon": "^4.9.1",
+    "@vant/weapp": "1.11.7",
     "vue": "3.4.21"
   },
   "devDependencies": {
@@ -22,6 +26,8 @@
     "eslint": "^10.0.0",
     "eslint-plugin-vue": "^10.11.0",
     "globals": "^17.12.0",
+    "reicon": "1.2.5",
+    "sharp": "^0.34.4",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.70.1",
     "vite": "5.2.8",

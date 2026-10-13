@@ -10,5 +10,6 @@ dist/
 coverage/
 .local/
 apps/miniapp/project.private.config.json
+apps/miniapp/src/wxcomponents/vant/
 /project.config.json
 /project.private.config.json

@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import MenuRow from "../../components/MenuRow.vue";
+import { computed, ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { api, getErrorMessage } from "../../services/api";
 import type { LoginRole, User } from "../../types";
 
 const user = ref<User | null>(api.user);
 const busyAction = ref("");
+const roleLabel = computed(() => {
+  if (user.value?.role === "MERCHANT") return "商户账号";
+  if (user.value?.role === "STUDENT") return "学生账号";
+  if (user.value?.role === "ADMIN") return "运营账号";
+  return "未登录";
+});
 
 function syncUser() {
   user.value = api.user;
@@ -56,10 +63,19 @@ function openMerchant() {
   uni.navigateTo({ url: "/pages/merchant/index" });
 }
 
+function openOrders() {
+  uni.switchTab({ url: "/pages/orders/index" });
+}
+
+function openProducts() {
+  uni.navigateTo({ url: "/pages/merchant/products" });
+}
+
 function requestLogout() {
   uni.showModal({
     title: "退出登录",
     content: "确定退出当前账号吗？",
+    confirmColor: "#c4532b",
     success: ({ confirm }) => {
       if (!confirm) return;
       api.logout();
@@ -74,49 +90,61 @@ onShow(syncUser);
 
 <template>
   <view class="page">
+    <view class="page-title">我的</view>
     <view class="profile">
       <view class="avatar">{{ user?.nickname?.slice(0, 1) || "食" }}</view>
       <view class="profile-main">
-        <view class="nickname">{{ user?.nickname || "欢迎使用校园美食街" }}</view>
+        <view class="nickname">{{ user?.nickname || "未登录" }}</view>
         <view class="account-state">
-          {{
-            user
-              ? user.role === "MERCHANT"
-                ? "商户账号"
-                : "学生账号"
-              : "尚未登录"
-          }}
+          <van-tag
+            :color="user?.role === 'MERCHANT' ? '#e9eff7' : '#f9e9d9'"
+            :text-color="user?.role === 'MERCHANT' ? '#466a95' : '#a35d33'"
+            size="medium"
+            round
+          >{{ roleLabel }}</van-tag>
         </view>
       </view>
     </view>
 
-    <view class="menu">
-      <view class="line" role="button" @click="wechatLogin">
-        <text class="ri ri-wechat-line line-icon wechat" aria-hidden="true" />
-        <text class="line-label">{{ busyAction === "wechat" ? "登录中…" : "微信登录" }}</text>
-        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
+    <view v-if="user?.role !== 'ADMIN'" class="menu-group">
+      <view class="group-title">{{ user?.role === 'MERCHANT' ? '店铺' : '订单' }}</view>
+      <view class="menu">
+        <template v-if="user?.role === 'MERCHANT'">
+          <MenuRow title="商户工作台" icon="dashboard" @click="openMerchant" />
+          <MenuRow title="商品管理" icon="bag" color="text" :border="false" @click="openProducts" />
+        </template>
+        <MenuRow v-else title="我的订单" icon="orders" :border="false" @click="openOrders" />
       </view>
+    </view>
+
+    <view class="menu-group">
+      <view class="group-title">账号</view>
+      <view class="menu">
+      <MenuRow
+        :title="busyAction === 'wechat' ? '登录中…' : '微信登录'"
+        icon="chat"
+        color="text"
+        :loading="busyAction === 'wechat'"
+        :border="api.devAuthEnabled || Boolean(user)"
+        @click="wechatLogin"
+      />
       <template v-if="api.devAuthEnabled">
-        <view class="line" role="button" @click="roleLogin('STUDENT')">
-          <text class="ri ri-graduation-cap-line line-icon student" aria-hidden="true" />
-          <text class="line-label">{{ busyAction === "STUDENT" ? "登录中…" : "学生登录" }}</text>
-          <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
-        </view>
-        <view class="line" role="button" @click="roleLogin('MERCHANT')">
-          <text class="ri ri-store-2-line line-icon merchant" aria-hidden="true" />
-          <text class="line-label">{{ busyAction === "MERCHANT" ? "登录中…" : "商户登录" }}</text>
-          <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
-        </view>
+        <MenuRow
+          :title="busyAction === 'STUDENT' ? '登录中…' : '学生登录'"
+          icon="graduation"
+          :loading="busyAction === 'STUDENT'"
+          @click="roleLogin('STUDENT')"
+        />
+        <MenuRow
+          :title="busyAction === 'MERCHANT' ? '登录中…' : '商户登录'"
+          icon="store"
+          color="text"
+          :loading="busyAction === 'MERCHANT'"
+          :border="Boolean(user)"
+          @click="roleLogin('MERCHANT')"
+        />
       </template>
-      <view v-if="user?.role === 'MERCHANT'" class="line" role="button" @click="openMerchant">
-        <text class="ri ri-dashboard-line line-icon workspace" aria-hidden="true" />
-        <text class="line-label">商户工作台</text>
-        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
-      </view>
-      <view v-if="user" class="line last-line" role="button" @click="requestLogout">
-        <text class="ri ri-logout-box-r-line line-icon logout" aria-hidden="true" />
-        <text class="line-label logout-label">退出登录</text>
-        <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
+      <MenuRow v-if="user" title="退出登录" icon="logout" color="danger" danger :border="false" @click="requestLogout" />
       </view>
     </view>
   </view>
@@ -124,111 +152,54 @@ onShow(syncUser);
 
 <style scoped>
 .page {
-  padding: 48rpx 32rpx;
+  padding: 26px 20px calc(35px + env(safe-area-inset-bottom));
 }
-
+.page-title { margin-bottom: 25px; font-size: 26px; font-weight: 800; }
 .profile {
   display: flex;
   align-items: center;
-  padding: 22rpx 12rpx 50rpx;
+  padding: 14px 2px 31px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .avatar {
   display: flex;
-  width: 112rpx;
-  height: 112rpx;
+  width: 70px;
+  height: 70px;
   flex: none;
   align-items: center;
   justify-content: center;
-  border-radius: 28rpx;
-  background: #ffe0c9;
-  color: #ad431f;
-  font-size: 50rpx;
+  border: 4px solid #fffdfa;
+  border-radius: 50%;
+  background: #e8c9ab;
+  color: #7b482a;
+  font-size: 29px;
   font-weight: 800;
 }
 
 .profile-main {
   min-width: 0;
-  margin-left: 25rpx;
+  flex: 1;
+  margin-left: 17px;
 }
 
 .nickname {
   overflow: hidden;
-  font-size: 37rpx;
+  font-size: 22px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .account-state {
-  margin-top: 10rpx;
-  color: #81766e;
-  font-size: 23rpx;
+  margin-top: 9px;
 }
-
+.menu-group { margin-top: 25px; }
+.group-title { margin: 0 0 10px 3px; color: #a08e7e; font-size: 12px; }
 .menu {
-  padding: 0 27rpx;
-  border: 1rpx solid #eee3da;
-  border-radius: 22rpx;
-  background: #fff;
-}
-
-.line {
-  display: flex;
-  align-items: center;
-  padding: 28rpx 0;
-  border-bottom: 1rpx solid #eee5de;
-}
-
-.line:last-child,
-.last-line {
-  border-bottom: 0;
-}
-
-.line-icon {
-  display: flex;
-  width: 48rpx;
-  height: 48rpx;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12rpx;
-  background: #3e8a58;
-  color: #fff;
-  font-size: 22rpx;
-  font-weight: 700;
-}
-
-.line-icon { font-size: 27rpx; }
-
-.line-icon.wechat { background: #3e8a58; }
-
-.line-icon.student {
-  background: #3f6f9e;
-}
-
-.line-icon.merchant,
-.line-icon.workspace {
-  background: #c4532b;
-}
-
-.line-icon.logout {
-  background: #7a6f67;
-}
-
-.line-label {
-  flex: 1;
-  margin-left: 20rpx;
-  color: #332d29;
-  font-size: 28rpx;
-}
-
-.logout-label {
-  color: #6d312e;
-}
-
-.arrow {
-  color: #8e837b;
-  font-size: 32rpx;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: #fffdfa;
 }
 </style>

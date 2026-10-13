@@ -9,6 +9,32 @@
 - API：NestJS、TypeScript、Prisma、MySQL 8、JWT/RBAC、订单幂等和事务扣减库存。
 - 小程序：uni-app、Vue 3、TypeScript，核心流程请求真实 API。
 
+## 项目结构
+
+```text
+apps/
+  api/src/
+    auth/          登录、身份校验
+    shops/         店铺和菜单
+    orders/        订单、状态规则
+    merchant/      商户经营与商品管理
+    health/        健康检查
+    database/      Prisma 与数据库配置
+    common/        环境加载、共用转换
+  miniapp/src/
+    pages/         小程序页面
+    components/    共用图标、操作按钮、订单与状态组件
+    composables/   页面轮询等组合逻辑
+    services/      请求、会话、各功能 API 与购物车
+    utils/         金额格式化、订单状态规则
+    icons/         ReIcon 图标与配色配置
+    static/icons/  小程序图标资源
+scripts/           本地启动、数据库与联调脚本
+deploy/            部署配置
+```
+
+图标统一使用 ReIcon，由 `ReIcon.vue` 展示，操作按钮复用 `IconButton.vue`。页面图标和底部导航均来自同一图库；更新图标配置后运行 `npm run icons:generate` 重新生成静态资源。
+
 ## 环境要求
 
 - Node.js 22 与 npm 10 或更高版本

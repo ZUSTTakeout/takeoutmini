@@ -1,5 +1,5 @@
 const { NotFoundException } = require("@nestjs/common");
-const { ShopsController } = require("../dist/shops.controller");
+const { ShopsController } = require("../dist/shops/shops.controller");
 
 describe("public shop endpoints", () => {
   const findMany = jest.fn();

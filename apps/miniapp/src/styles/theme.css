@@ -1,48 +1,19 @@
-:root {
+page {
   --color-brand: #c4532b;
   --color-brand-strong: #a43e1d;
   --color-brand-soft: #fff0e5;
   --color-text: #2d2824;
   --color-text-secondary: #81766e;
   --color-border: #eee3da;
-  --color-success: #28794a;
+  --color-success: #3f6f78;
   --color-danger: #b23b34;
   --radius-control: 14rpx;
   --radius-card: 22rpx;
   --radius-panel: 28rpx;
-  --fixed-action-clearance: 132rpx;
+  --fixed-action-clearance: calc(40px + 80rpx);
   --space-page-x: 32rpx;
   --space-card: 24rpx;
-  --font-body: 24rpx;
-  --font-caption: 21rpx;
-  --font-title: 42rpx;
+  --font-body: 12px;
+  --font-caption: 10.5px;
+  --font-title: 21px;
 }
-
-@font-face {
-  font-family: "remixicon";
-  src: url("/static/remixicon.woff2") format("woff2");
-  font-weight: normal;
-  font-style: normal;
-}
-
-.ri {
-  font-family: "remixicon" !important;
-  font-style: normal;
-  font-weight: normal;
-  line-height: 1;
-  -webkit-font-smoothing: antialiased;
-}
-
-.ri-add-line::before { content: "\ea13"; }
-.ri-arrow-right-s-line::before { content: "\ea6e"; }
-.ri-dashboard-line::before { content: "\ec14"; }
-.ri-file-list-3-line::before { content: "\ecef"; }
-.ri-home-4-line::before { content: "\ee1d"; }
-.ri-logout-box-r-line::before { content: "\eeda"; }
-.ri-refresh-line::before { content: "\f064"; }
-.ri-restaurant-2-line::before { content: "\f082"; }
-.ri-shopping-bag-3-line::before { content: "\f116"; }
-.ri-store-2-line::before { content: "\f1a5"; }
-.ri-user-3-line::before { content: "\f256"; }
-.ri-wechat-line::before { content: "\f2b6"; }
-.ri-graduation-cap-line::before { content: "\f333"; }

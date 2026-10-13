@@ -1,82 +1,55 @@
-<script setup lang="ts">
-const props = withDefaults(
-  defineProps<{
-    value: number;
-    max: number;
-    disabled?: boolean;
-  }>(),
-  { disabled: false },
-);
+﻿<script setup lang="ts">
+import { nativeNumber } from "../utils/events";
+import ReIcon from "./ReIcon.vue";
+
+const props = withDefaults(defineProps<{
+  value: number;
+  max: number;
+  disabled?: boolean;
+}>(), { disabled: false });
 
 const emit = defineEmits<{ change: [value: number] }>();
 
-function decrease() {
-  if (!props.disabled) emit("change", Math.max(0, props.value - 1));
-}
-
-function increase() {
-  if (!props.disabled && props.value < props.max) emit("change", props.value + 1);
+function change(event: unknown) {
+  const quantity = nativeNumber(event);
+  if (!props.disabled && Number.isFinite(quantity)) {
+    emit("change", Math.min(props.max, Math.max(0, quantity)));
+  }
 }
 </script>
 
 <template>
-  <view class="stepper" @click.stop>
-    <button
-      class="icon-button secondary"
+  <view class="quantity-stepper" @click.stop>
+    <van-stepper
+      :value="value"
+      :min="0"
+      :max="max"
       :disabled="disabled"
-      aria-label="减少一份"
-      @click.stop="decrease"
+      :integer="true"
+      :disable-input="true"
+      :async-change="true"
+      theme="round"
+      plus-class="quantity-plus"
+      minus-class="quantity-minus"
+      button-size="28px"
+      input-width="26px"
+      aria-label="商品数量"
+      @change="change"
     >
-      −
-    </button>
-    <text class="quantity">{{ value }}</text>
-    <button
-      class="icon-button"
-      :disabled="disabled || value >= max"
-      aria-label="增加一份"
-      @click.stop="increase"
-    >
-      ＋
-    </button>
+      <view slot="minus" class="quantity-symbol"><ReIcon name="minus" color="brand" :size="17" /></view>
+      <view slot="plus" class="quantity-symbol"><ReIcon name="add" color="white" :size="17" /></view>
+    </van-stepper>
   </view>
 </template>
 
 <style scoped>
-.stepper {
+.quantity-stepper {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 12rpx;
+  --stepper-input-font-size: 13px;
+  --stepper-input-text-color: var(--color-text);
 }
-
-.icon-button {
-  width: 58rpx;
-  height: 58rpx;
-  margin: 0;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--color-brand);
-  color: #fff;
-  font-size: 34rpx;
-  line-height: 54rpx;
-}
-
-.icon-button.secondary {
-  border: 2rpx solid #d7c9bd;
-  background: #fff;
-  color: #5f554e;
-}
-
-.icon-button[disabled] {
-  background: #e8dfd7;
-  color: #a79d96;
-  opacity: 1;
-}
-
-.quantity {
-  min-width: 34rpx;
-  color: #2d2824;
-  font-size: 27rpx;
-  font-weight: 700;
-  text-align: center;
-}
+.quantity-symbol { display: flex; height: 100%; align-items: center; justify-content: center; }
 </style>
+

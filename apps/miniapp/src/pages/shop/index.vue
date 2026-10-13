@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import CheckoutBar from "../../components/CheckoutBar.vue";
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
-import QuantityStepper from "../../components/QuantityStepper.vue";
+import ProductRow from "../../components/ProductRow.vue";
 import StateView from "../../components/StateView.vue";
 import { api, getErrorMessage } from "../../services/api";
 import { loadCart, reconcileCart, saveCart } from "../../services/cart";
@@ -166,48 +167,16 @@ onShow(syncCart);
         empty-text="该分类暂无可售菜品"
       />
 
-      <view v-for="product in products" :key="product.id" class="product">
-        <image
-          v-if="product.image"
-          class="picture"
-          :src="product.image"
-          mode="aspectFill"
-        />
-        <view v-else class="picture placeholder">餐</view>
-        <view class="info">
-          <view class="product-name">{{ product.name }}</view>
-          <view class="description">{{ product.description || "新鲜现做" }}</view>
-          <view class="price-row">
-            <text class="price">{{ api.money(product.price) }}</text>
-            <text class="stock">剩余 {{ product.stock }}</text>
-          </view>
-        </view>
-        <QuantityStepper
-          v-if="quantity(product.id) > 0"
-          :value="quantity(product.id)"
-          :max="Math.min(product.stock, 99)"
-          :disabled="!shop.isOpen"
-          @change="changeQuantity(product, $event)"
-        />
-        <button
-          v-else
-          class="add-button"
-          :disabled="!shop.isOpen || product.stock < 1"
-          aria-label="加入购物车"
-          @click="changeQuantity(product, 1)"
-        >
-          ＋
-        </button>
-      </view>
+      <ProductRow
+        v-for="product in products"
+        :key="product.id"
+        :product="product"
+        :quantity="quantity(product.id)"
+        :disabled="!shop.isOpen"
+        @change="changeQuantity(product, $event)"
+      />
 
-      <view v-if="cart.length && shop.isOpen" class="cart-bar">
-        <view>
-          <text class="cart-count">{{ itemCount }} 份</text>
-          <text class="separator">·</text>
-          <text>{{ api.money(total) }}</text>
-        </view>
-        <button class="checkout" @click="goCart">去结算</button>
-      </view>
+      <CheckoutBar v-if="cart.length && shop.isOpen" :count="itemCount" :total="total" label="去结算" @action="goCart" />
     </template>
   </view>
 </template>
@@ -238,7 +207,7 @@ onShow(syncCart);
   width: 96rpx;
   height: 96rpx;
   border-radius: 22rpx;
-  font-size: 44rpx;
+  font-size: 22px;
 }
 
 .head-main {
@@ -248,7 +217,8 @@ onShow(syncCart);
 }
 
 .name {
-  font-size: 38rpx;
+  overflow-wrap: anywhere;
+  font-size: 19px;
   font-weight: 800;
 }
 
@@ -256,18 +226,19 @@ onShow(syncCart);
   overflow: hidden;
   margin-top: 9rpx;
   color: #776c64;
-  font-size: 23rpx;
+  font-size: 11.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .shop-status {
+  flex: none;
   margin-left: 18rpx;
   padding: 6rpx 10rpx;
   border-radius: 8rpx;
   background: #e4f3e8;
-  color: #28794a;
-  font-size: 20rpx;
+  color: #3f6f78;
+  font-size: 10px;
 }
 
 .shop-status.closed {
@@ -297,8 +268,8 @@ onShow(syncCart);
   background: #f0ece8;
 }
 
-.closed-title { color: #554c46; font-size: 23rpx; font-weight: 700; }
-.closed-note { margin-top: 5rpx; color: #81766e; font-size: 20rpx; }
+.closed-title { color: #554c46; font-size: 11.5px; font-weight: 700; }
+.closed-note { margin-top: 5rpx; color: #81766e; font-size: 10px; }
 
 .tab {
   display: inline-block;
@@ -306,7 +277,7 @@ onShow(syncCart);
   padding: 12rpx 0;
   border-bottom: 5rpx solid transparent;
   color: #756b64;
-  font-size: 27rpx;
+  font-size: 13.5px;
 }
 
 .tab.active {
@@ -315,112 +286,4 @@ onShow(syncCart);
   font-weight: 700;
 }
 
-.product {
-  display: flex;
-  align-items: center;
-  padding: 26rpx 0;
-  border-bottom: 1rpx solid #eadfd6;
-}
-
-.picture {
-  width: 132rpx;
-  height: 132rpx;
-  border-radius: 20rpx;
-}
-
-.placeholder {
-  background: #fff0e5;
-  color: #bd6845;
-  font-size: 36rpx;
-}
-
-.info {
-  min-width: 0;
-  flex: 1;
-  margin: 0 20rpx;
-}
-
-.product-name {
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.description {
-  overflow: hidden;
-  margin: 10rpx 0;
-  color: #7f756e;
-  font-size: 22rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12rpx;
-}
-
-.price {
-  color: var(--color-brand-strong);
-  font-size: 29rpx;
-  font-weight: 700;
-}
-
-.stock {
-  color: #887e77;
-  font-size: 20rpx;
-}
-
-.add-button {
-  width: 58rpx;
-  height: 58rpx;
-  margin: 0;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--color-brand);
-  color: #fff;
-  font-size: 34rpx;
-  line-height: 54rpx;
-}
-
-.add-button[disabled] {
-  background: #e8dfd7;
-  color: #a79d96;
-  opacity: 1;
-}
-
-.cart-bar {
-  position: fixed;
-  right: 28rpx;
-  bottom: calc(24rpx + env(safe-area-inset-bottom));
-  left: 28rpx;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12rpx 14rpx 12rpx 30rpx;
-  border-radius: 22rpx;
-  background: #2d2824;
-  color: #fff;
-}
-
-.cart-count {
-  color: #ffb08d;
-  font-weight: 700;
-}
-
-.separator {
-  margin: 0 10rpx;
-  color: #bfb4ad;
-}
-
-.checkout {
-  height: 70rpx;
-  margin: 0;
-  padding: 0 32rpx;
-  background: var(--color-brand);
-  color: #fff;
-  font-size: 26rpx;
-  line-height: 70rpx;
-}
 </style>

@@ -5,7 +5,7 @@ const {
   isSameIdempotentOrder,
   normalizeOrderItems,
   normalizeRemark,
-} = require("../dist/order-policy");
+} = require("../dist/orders/order-policy");
 
 describe("order policy", () => {
   test("enforces the student and merchant state machines", () => {

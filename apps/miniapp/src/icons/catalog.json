@@ -1,0 +1,40 @@
+{
+  "icons": {
+    "add": "Plus",
+    "minus": "Minus",
+    "refresh": "Refresh",
+    "chevron-right": "ChevronRight",
+    "arrow-right": "ArrowRight",
+    "bag": "ShoppingBag",
+    "cart": "ShoppingCart",
+    "check": "Check",
+    "close": "X",
+    "edit": "Edit",
+    "save": "Floppy",
+    "restaurant": "ForkKnife",
+    "alert": "Warning",
+    "empty": "FoodTray",
+    "home": "Home",
+    "orders": "DocumentText",
+    "store": "Shop",
+    "user": "UserCircle",
+    "graduation": "GraduationCap",
+    "dashboard": "Widget",
+    "logout": "Logout",
+    "chat": "ChatRoundDots",
+    "search": "Search"
+  },
+  "colors": {
+    "text": "#2d2824",
+    "secondary": "#81766e",
+    "brand": "#c4532b",
+    "success": "#3f6f78",
+    "danger": "#b23b34",
+    "white": "#ffffff"
+  },
+  "tabBar": {
+    "names": ["home", "orders", "user"],
+    "color": "#9b9289",
+    "selectedColor": "#f36d3b"
+  }
+}

@@ -1,54 +1,33 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { onHide, onShow, onUnload } from "@dcloudio/uni-app";
+import IconButton from "../../components/IconButton.vue";
+import ReIcon from "../../components/ReIcon.vue";
 import StateView from "../../components/StateView.vue";
+import MerchantNav from "../../components/MerchantNav.vue";
+import MerchantOrderCard from "../../components/MerchantOrderCard.vue";
+import { usePagePolling } from "../../composables/usePagePolling";
 import { ApiError, api, getErrorMessage } from "../../services/api";
-import type { MerchantStats, Order, OrderStatus, Shop } from "../../types";
-
-const ACTIVE_STATUSES: OrderStatus[] = ["CREATED", "ACCEPTED", "READY"];
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  CREATED: "ACCEPTED",
-  ACCEPTED: "READY",
-  READY: "COMPLETED",
-};
-const ACTION_TEXT: Partial<Record<OrderStatus, string>> = {
-  CREATED: "接单并开始制作",
-  ACCEPTED: "标记为待取餐",
-  READY: "标记为已完成",
-};
+import { nativeDetail } from "../../utils/events";
+import { formatMoney } from "../../utils/format";
+import { ACTIVE_STATUSES, NEXT_STATUS } from "../../utils/order";
+import type { MerchantStats, Order, Shop } from "../../types";
 
 const shop = ref<Shop | null>(null);
 const orders = ref<Order[]>([]);
-const stats = ref<MerchantStats>({
-  completedOrders: 0,
-  revenue: 0,
-  productCount: 0,
-});
+const stats = ref<MerchantStats>({ completedOrders: 0, revenue: 0, productCount: 0 });
 const loading = ref(false);
 const error = ref("");
 const needsMerchantLogin = ref(false);
 const toggling = ref(false);
 const updatingOrderId = ref("");
-let pollTimer: ReturnType<typeof setInterval> | undefined;
 let knownOrderIds: Set<string> | undefined;
+const pendingOrders = computed(() => orders.value.filter((order) => ACTIVE_STATUSES.includes(order.status)));
+const createdCount = computed(() => orders.value.filter((order) => order.status === "CREATED").length);
+const previewOrders = computed(() => pendingOrders.value.slice(0, 3));
 
-const pendingOrders = computed(() =>
-  orders.value.filter((order) => ACTIVE_STATUSES.includes(order.status)),
-);
-
-function goLogin() {
-  uni.switchTab({ url: "/pages/profile/index" });
-}
-
-function openProducts() {
-  uni.navigateTo({ url: "/pages/merchant/products" });
-}
-
-function openOrder(order: Order) {
-  uni.navigateTo({
-    url: `/pages/orders/detail?id=${encodeURIComponent(order.id)}&merchant=1`,
-  });
-}
+function goLogin() { uni.switchTab({ url: "/pages/profile/index" }); }
+function openPage(page: string) { uni.navigateTo({ url: `/pages/merchant/${page}` }); }
+function openOrder(order: Order) { uni.navigateTo({ url: `/pages/orders/detail?id=${encodeURIComponent(order.id)}&merchant=1` }); }
 
 async function load() {
   error.value = "";
@@ -58,84 +37,47 @@ async function load() {
     shop.value = null;
     orders.value = [];
     needsMerchantLogin.value = true;
-    error.value = api.token
-      ? "当前账号不是商户身份，请切换账号后进入"
-      : "请先登录商户账号";
+    error.value = api.token ? "当前账号不是商户身份，请切换账号后进入" : "请先登录商户账号";
     return;
   }
-
   loading.value = true;
   try {
-    const [shopResult, orderResult, statsResult] = await Promise.all([
-      api.merchantShop(),
-      api.merchantOrders(),
-      api.merchantStats(),
-    ]);
+    const [shopResult, orderResult, statsResult] = await Promise.all([api.merchantShop(), api.merchantOrders(), api.merchantStats()]);
     shop.value = shopResult;
     orders.value = orderResult;
     stats.value = statsResult;
     knownOrderIds = new Set(orderResult.map((order) => order.id));
-    updateOrdersBadge(orderResult);
   } catch (reason: unknown) {
-    shop.value = null;
-    orders.value = [];
-    if (
-      reason instanceof ApiError &&
-      (reason.statusCode === 401 || reason.statusCode === 403)
-    ) {
+    if (reason instanceof ApiError && (reason.statusCode === 401 || reason.statusCode === 403)) {
       needsMerchantLogin.value = true;
       error.value = "商户身份无效，请重新登录";
-    } else {
-      error.value = getErrorMessage(reason, "工作台加载失败，请稍后重试");
-    }
-  } finally {
-    loading.value = false;
-  }
+    } else error.value = getErrorMessage(reason, "工作台加载失败，请稍后重试");
+  } finally { loading.value = false; }
 }
 
-async function toggle(event: Event) {
+async function toggle(event: unknown) {
   if (!shop.value || toggling.value) return;
-  const isOpen = Boolean(
-    (event as unknown as { detail?: { value?: boolean } }).detail?.value,
-  );
+  const isOpen = Boolean(nativeDetail<boolean>(event));
   toggling.value = true;
   try {
     shop.value = await api.updateShop({ isOpen });
     uni.showToast({ title: isOpen ? "店铺已营业" : "店铺已休息" });
-  } catch (reason: unknown) {
-    uni.showToast({
-      title: getErrorMessage(reason, "营业状态更新失败"),
-      icon: "none",
-    });
-  } finally {
-    toggling.value = false;
-  }
+  } catch (reason: unknown) { uni.showToast({ title: getErrorMessage(reason, "营业状态更新失败"), icon: "none" }); }
+  finally { toggling.value = false; }
 }
 
-async function advance(order: Order) {
-  const nextStatus = NEXT_STATUS[order.status];
-  if (!nextStatus || updatingOrderId.value) return;
+async function transition(order: Order, cancel = false) {
+  const status = cancel ? "CANCELLED" : NEXT_STATUS[order.status];
+  if (!status || updatingOrderId.value) return;
   updatingOrderId.value = order.id;
-  try {
-    await api.merchantStatus(order.id, nextStatus);
-    await load();
-  } catch (reason: unknown) {
-    uni.showToast({
-      title: getErrorMessage(reason, "订单状态更新失败"),
-      icon: "none",
-    });
-  } finally {
-    updatingOrderId.value = "";
-  }
+  try { await api.merchantStatus(order.id, status); await load(); }
+  catch (reason: unknown) { uni.showToast({ title: getErrorMessage(reason, "订单状态更新失败"), icon: "none" }); }
+  finally { updatingOrderId.value = ""; }
 }
 
-function updateOrdersBadge(orderList: Order[]) {
-  const count = orderList.filter((order) => order.status === "CREATED").length;
-  if (count) {
-    uni.setTabBarBadge({ index: 1, text: count > 99 ? "99+" : String(count) });
-  } else {
-    uni.removeTabBarBadge({ index: 1 });
-  }
+function requestCancel(order: Order) {
+  if (updatingOrderId.value) return;
+  uni.showModal({ title: "拒绝订单", content: "确定取消这笔订单吗？", confirmColor: "#b23b34", success: ({ confirm }) => { if (confirm) void transition(order, true); } });
 }
 
 async function pollOrders() {
@@ -143,281 +85,57 @@ async function pollOrders() {
   try {
     const latest = await api.merchantOrders();
     const knownIds = knownOrderIds;
-    const hasNewOrder = Boolean(
-      knownIds &&
-      latest.some((order) => order.status === "CREATED" && !knownIds.has(order.id)),
-    );
+    const hasNewOrder = Boolean(knownIds && latest.some((order) => order.status === "CREATED" && !knownIds.has(order.id)));
     orders.value = latest;
     knownOrderIds = new Set(latest.map((order) => order.id));
-    updateOrdersBadge(latest);
-    if (hasNewOrder) {
-      uni.vibrateShort({ type: "medium" });
-      uni.showToast({ title: "收到新订单", icon: "none" });
-    }
-  } catch {
-    // Keep the last known order list visible; manual refresh remains available.
-  }
+    if (hasNewOrder) { uni.vibrateShort({ type: "medium" }); uni.showToast({ title: "收到新订单", icon: "none" }); }
+  } catch { /* 保留最近一次成功加载的订单。 */ }
 }
-
-function stopPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = undefined;
-}
-
-function startPolling() {
-  stopPolling();
-  pollTimer = setInterval(() => void pollOrders(), 10_000);
-}
-
-onShow(() => {
-  void load();
-  startPolling();
-});
-onHide(stopPolling);
-onUnload(stopPolling);
+usePagePolling(pollOrders, { onPageShow: load });
 </script>
 
 <template>
   <view class="page">
+    <view class="page-heading"><view class="heading-main"><text class="eyebrow">食巷 · 商户中心</text><text class="heading">经营工作台</text></view><IconButton name="refresh" label="刷新工作台" :loading="loading" @click="load" /></view>
     <StateView :loading="loading" />
-    <StateView
-      v-if="!loading && error"
-      :error="error"
-      :action-text="needsMerchantLogin ? '去登录' : '重新加载'"
-      @action="needsMerchantLogin ? goLogin() : load()"
-    />
-
+    <StateView v-if="!loading && error" :error="error" :action-text="needsMerchantLogin ? '去登录' : '重新加载'" @action="needsMerchantLogin ? goLogin() : load()" />
     <template v-if="shop && !loading && !error">
-      <view class="head">
-        <view class="head-main">
-          <view class="title">商户工作台</view>
-          <view class="shop-name">{{ shop.name }}</view>
-        </view>
-        <view class="open-control">
-          <text>{{ shop.isOpen ? "营业中" : "休息中" }}</text>
-          <switch
-            :checked="shop.isOpen"
-            :disabled="toggling"
-            color="#c4532b"
-            @change="toggle"
-          />
-        </view>
-      </view>
-
-      <view class="stats">
-        <view class="stat">
-          <text class="stat-value">{{ stats.completedOrders }}</text>
-          <text class="stat-label">已完成订单</text>
-        </view>
-        <view class="stat">
-          <text class="stat-value">{{ api.money(stats.revenue) }}</text>
-          <text class="stat-label">累计营业额</text>
-        </view>
-        <view class="stat">
-          <text class="stat-value">{{ stats.productCount }}</text>
-          <text class="stat-label">在售商品</text>
-        </view>
-      </view>
-
-      <view class="manage-entry" role="button" @click="openProducts">
-        <view>
-          <view class="manage-title">商品与分类管理</view>
-          <view class="manage-caption">编辑价格、库存和上架状态</view>
-        </view>
-        <text class="manage-arrow">›</text>
-      </view>
-
-      <view class="section-head">
-        <view class="section-title">待处理订单</view>
-        <button class="refresh" :disabled="loading" @click="load">刷新订单</button>
-      </view>
-      <StateView
-        :empty="pendingOrders.length === 0"
-        empty-text="暂无待处理订单"
-      />
-
-      <view v-for="order in pendingOrders" :key="order.id" class="order" @click="openOrder(order)">
-        <view class="order-top">
-          <text class="order-number">#{{ order.number.slice(-6) }}</text>
-          <text class="total">{{ api.money(order.total) }}</text>
-        </view>
-        <view class="items">
-          {{ order.items.map((item) => `${item.name} × ${item.quantity}`).join("、") }}
-        </view>
-        <button
-          class="order-action"
-          :disabled="Boolean(updatingOrderId)"
-          @click.stop="advance(order)"
-        >
-          {{ updatingOrderId === order.id ? "更新中…" : ACTION_TEXT[order.status] }}
-        </button>
-      </view>
+      <view class="shop-strip"><view class="shop-mark"><ReIcon name="store" color="brand" :size="30" /></view><view class="shop-main"><text class="shop-name">{{ shop.name }}</text><text class="shop-state">{{ shop.isOpen ? '营业中' : '休息中' }}</text></view><van-switch :checked="shop.isOpen" :loading="toggling" active-color="#c4532b" inactive-color="#dfd9d2" size="24px" @change="toggle" /></view>
+      <view class="stats"><view class="stat"><text class="stat-label">已完成订单</text><text class="stat-number">{{ stats.completedOrders }}</text></view><view class="stat"><text class="stat-label">累计营业额</text><text class="stat-number revenue">{{ formatMoney(stats.revenue) }}</text></view><view class="stat"><text class="stat-label">待接单</text><text class="stat-number pending">{{ createdCount }}</text></view></view>
+      <view class="quick-nav"><view class="quick-item" role="button" @click="openPage('products')"><view class="quick-icon orange"><ReIcon name="bag" color="brand" :size="26" /></view><text>商品管理</text></view><view class="quick-item" role="button" @click="openPage('orders')"><view class="quick-icon blue"><ReIcon name="orders" color="text" :size="26" /></view><text>订单管理</text></view><view class="quick-item" role="button" @click="openPage('settings')"><view class="quick-icon sand"><ReIcon name="edit" color="brand" :size="26" /></view><text>营业设置</text></view><view class="quick-item" role="button" @click="openPage('profile')"><view class="quick-icon graphite"><ReIcon name="user" color="text" :size="26" /></view><text>店铺信息</text></view></view>
+      <van-cell title="店铺公告" :label="shop.notice || '暂无公告'" center clickable custom-style="margin:20rpx 0;border-radius:18rpx;background:#fff;" @click="openPage('settings')"><template #right-icon><ReIcon name="chevron-right" color="secondary" :size="18" /></template></van-cell>
+      <view class="section-heading"><text class="section-title">待处理订单 <text class="count">{{ pendingOrders.length }}</text></text><IconButton name="arrow-right" label="查看全部订单" @click="openPage('orders')" /></view>
+      <StateView :empty="pendingOrders.length === 0" empty-text="暂无待处理订单" />
+      <MerchantOrderCard v-for="order in previewOrders" :key="order.id" :order="order" :busy="updatingOrderId === order.id" :disabled="Boolean(updatingOrderId)" @open="openOrder(order)" @advance="transition(order)" @cancel="requestCancel(order)" />
+      <view class="product-count"><text>{{ stats.productCount }} 件在售商品</text><ReIcon name="store" color="secondary" :size="14" /></view>
     </template>
   </view>
+  <MerchantNav active="home" />
 </template>
 
 <style scoped>
-.page {
-  padding: 38rpx 32rpx 50rpx;
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10rpx 4rpx 26rpx;
-}
-
-.head-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.title {
-  font-size: 42rpx;
-  font-weight: 800;
-}
-
-.shop-name {
-  overflow: hidden;
-  margin-top: 8rpx;
-  color: #81766e;
-  font-size: 23rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.open-control {
-  display: flex;
-  margin-left: 20rpx;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8rpx;
-  color: #655b54;
-  font-size: 21rpx;
-}
-
-.stats {
-  display: flex;
-  margin: 10rpx 0 32rpx;
-  padding: 28rpx 10rpx;
-  border-radius: 22rpx;
-  background: #2d2824;
-  color: #fff;
-}
-
-.stat {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat + .stat {
-  border-left: 1rpx solid #554a44;
-}
-
-.stat-value {
-  color: #ffb08d;
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.stat-label {
-  margin-top: 9rpx;
-  color: #d0c6bf;
-  font-size: 20rpx;
-}
-
-.section-title {
-  margin: 8rpx 0 18rpx;
-  font-size: 31rpx;
-  font-weight: 700;
-}
-
-.manage-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 32rpx;
-  padding: 24rpx;
-  border: 1rpx solid #eee3da;
-  border-radius: 22rpx;
-  background: #fff;
-}
-
-.manage-title {
-  font-size: 27rpx;
-  font-weight: 700;
-}
-
-.manage-caption {
-  margin-top: 7rpx;
-  color: #81766e;
-  font-size: 21rpx;
-}
-
-.manage-arrow {
-  color: var(--color-brand-strong);
-  font-size: 42rpx;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.refresh {
-  flex: none;
-  margin: 0 0 10rpx;
-  padding: 0 14rpx;
-  background: transparent;
-  color: var(--color-brand-strong);
-  font-size: 23rpx;
-}
-
-.order {
-  margin-bottom: 18rpx;
-  padding: 25rpx;
-  border: 1rpx solid #eee3da;
-  border-radius: 22rpx;
-  background: #fff;
-}
-
-.order-top {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 700;
-}
-
-.order-number {
-  color: #4b433e;
-}
-
-.total {
-  color: var(--color-brand-strong);
-}
-
-.items {
-  margin: 18rpx 0;
-  color: #655c56;
-  font-size: 24rpx;
-  line-height: 1.6;
-}
-
-.order-action {
-  height: 72rpx;
-  background: var(--color-brand);
-  color: #fff;
-  font-size: 25rpx;
-  line-height: 72rpx;
-}
-
-.order-action[disabled] {
-  background: #8c8179;
-  color: #eee7e2;
-  opacity: 1;
-}
+.page { padding: 28rpx 30rpx 30rpx; }
+.page-heading, .shop-strip, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
+.page-heading { padding: 0 2rpx 25rpx; }
+.heading-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 8rpx; }
+.eyebrow { color: #a43e1d; font-size: 10px; font-weight: 650; letter-spacing: 1px; }
+.heading { color: #2d2824; font-size: 22px; font-weight: 800; }
+.shop-strip { padding: 26rpx 0; border-top: 1rpx solid #e8dfd6; border-bottom: 1rpx solid #e8dfd6; }
+.shop-mark { display: flex; width: 55px; height: 55px; flex: none; align-items: center; justify-content: center; border-radius: 18rpx; background: #ffe9d8; }
+.shop-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 10rpx; }
+.shop-name { overflow-wrap: anywhere; font-size: 17px; font-weight: 750; line-height: 1.4; }
+.shop-state { color: #81766e; font-size: 11px; }
+.stats { display: grid; grid-template-columns: 1fr 1.3fr .8fr; margin: 24rpx 0; padding: 28rpx 20rpx; border-radius: 20rpx; background: #2d2824; }
+.stat { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 16rpx; }
+.stat + .stat { border-left: 1rpx solid #564d46; }
+.stat-label { color: #d2c7bc; font-size: 10px; }
+.stat-number { max-width: 100%; overflow-wrap: anywhere; color: #fffaf4; font-size: 23px; font-weight: 750; }
+.stat-number.revenue { color: #ffbb91; font-size: 19px; }.stat-number.pending { color: #ffbb91; }
+.quick-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12rpx; padding: 16rpx 0 18rpx; }
+.quick-item { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 16rpx; color: #5b5049; font-size: 11px; }
+.quick-icon { display: flex; width: 52px; height: 52px; align-items: center; justify-content: center; border-radius: 16rpx; }
+.orange { background: #ffe9d8; }.blue { background: #e7eff5; }.sand { background: #f0e9df; }.graphite { background: #e9e5e0; }
+.section-heading { margin: 28rpx 0 16rpx; }.section-title { font-size: 16px; font-weight: 750; }
+.count { margin-left: 12rpx; color: #a43e1d; font-size: 13px; }
+.product-count { display: flex; align-items: center; justify-content: center; gap: 12rpx; padding: 20rpx; color: #81766e; font-size: 10px; }
 </style>

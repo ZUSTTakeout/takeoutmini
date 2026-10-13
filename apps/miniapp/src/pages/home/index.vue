@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import SearchField from "../../components/SearchField.vue";
+import ShopRow from "../../components/ShopRow.vue";
+import ReIcon from "../../components/ReIcon.vue";
 import { ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import StateView from "../../components/StateView.vue";
@@ -8,6 +11,16 @@ import type { Shop } from "../../types";
 const shops = ref<Shop[]>([]);
 const loading = ref(true);
 const error = ref("");
+const search = ref("");
+
+function visibleShops() {
+  const query = search.value.trim().toLowerCase();
+  if (!query) return shops.value;
+  return shops.value.filter((shop) =>
+    [shop.name, shop.notice, ...shop.categories.map((category) => category.name)]
+      .join(" ").toLowerCase().includes(query),
+  );
+}
 
 async function load() {
   loading.value = true;
@@ -36,40 +49,30 @@ onShow(load);
         <view class="title">营业店铺</view>
         <view class="subtitle">到店自取</view>
       </view>
-      <text v-if="!loading && !error" class="count">
-        <text class="ri ri-store-2-line count-icon" aria-hidden="true" />
-        {{ shops.length }} 家营业中
-      </text>
+      <view v-if="!loading && !error" class="count">
+        <ReIcon name="store" color="brand" :size="14" class="count-icon" />
+        <text>{{ shops.length }} 家营业中</text>
+      </view>
     </view>
+
+    <SearchField v-model="search" placeholder="搜索店铺或菜品" />
 
     <StateView
       :loading="loading"
       :error="error"
-      :empty="!loading && !error && shops.length === 0"
-      empty-text="暂时没有营业店铺"
+      :empty="!loading && !error && visibleShops().length === 0"
+      :empty-text="search ? '没有匹配的店铺' : '暂时没有营业店铺'"
       action-text="重新加载"
       @action="load"
     />
 
-    <view
-      v-for="shop in shops"
+    <ShopRow
+      v-for="shop in visibleShops()"
       v-show="!loading && !error"
       :key="shop.id"
-      class="shop-row"
-      role="button"
-      @click="openShop(shop.id)"
-    >
-      <view class="logo">{{ shop.name.slice(0, 1) }}</view>
-      <view class="shop-main">
-        <view class="shop-name">
-          <text>{{ shop.name }}</text>
-          <text class="open">营业中</text>
-        </view>
-        <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
-        <view class="meta">校园自取</view>
-      </view>
-      <text class="ri ri-arrow-right-s-line arrow" aria-hidden="true" />
-    </view>
+      :shop="shop"
+      @open="openShop(shop.id)"
+    />
   </view>
 </template>
 
@@ -77,6 +80,8 @@ onShow(load);
 .page {
   padding: 38rpx 32rpx 48rpx;
 }
+
+.page :deep(.search-field) { margin: 0 0 12px; }
 
 .section-head {
   display: flex;
@@ -86,14 +91,14 @@ onShow(load);
 }
 
 .title {
-  font-size: 42rpx;
+  font-size: 21px;
   font-weight: 800;
 }
 
 .subtitle,
 .count {
   color: #81766e;
-  font-size: 23rpx;
+  font-size: 11.5px;
 }
 
 .subtitle {
@@ -101,6 +106,8 @@ onShow(load);
 }
 
 .count {
+  display: flex;
+  align-items: center;
   padding-bottom: 4rpx;
 }
 
@@ -126,7 +133,7 @@ onShow(load);
   border-radius: 22rpx;
   background: #ffe0c9;
   color: #ad431f;
-  font-size: 44rpx;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -140,24 +147,31 @@ onShow(load);
   display: flex;
   align-items: center;
   gap: 12rpx;
-  font-size: 30rpx;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .open {
+  flex: none;
   padding: 4rpx 10rpx;
   border-radius: 8rpx;
   background: #e4f3e8;
-  color: #28794a;
-  font-size: 19rpx;
+  color: #3f6f78;
+  font-size: 9.5px;
   font-weight: 500;
+}
+
+.shop-title {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .notice {
   overflow: hidden;
   margin-top: 11rpx;
   color: #665d57;
-  font-size: 24rpx;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -165,12 +179,12 @@ onShow(load);
 .meta {
   margin-top: 9rpx;
   color: #8d837c;
-  font-size: 21rpx;
+  font-size: 10.5px;
 }
 
 .arrow {
   margin-left: 12rpx;
   color: #8e837b;
-  font-size: 34rpx;
+  font-size: 17px;
 }
 </style>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CheckoutBar from "../../components/CheckoutBar.vue";
+import { formatMoney } from "../../utils/format";
 import { computed, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import QuantityStepper from "../../components/QuantityStepper.vue";
@@ -206,7 +208,7 @@ onLoad((query) => {
         <view v-for="item in items" :key="item.productId" class="item-row">
           <view class="item-main">
             <view class="item-name">{{ item.name }}</view>
-            <view class="item-price">{{ api.money(item.price * item.quantity) }}</view>
+            <view class="item-price">{{ formatMoney(item.price * item.quantity) }}</view>
           </view>
           <QuantityStepper
             :value="item.quantity"
@@ -227,19 +229,16 @@ onLoad((query) => {
         <view class="remark-count">{{ remark.length }}/200</view>
       </view>
 
-      <view v-if="items.length" class="bottom-bar">
-        <view>
-          <text class="total-label">合计</text>
-          <text class="total">{{ api.money(total) }}</text>
-        </view>
-        <button
-          class="submit-button"
-          :disabled="submitting || !shop?.isOpen"
-          @click="submit"
-        >
-          {{ submitting ? "提交中…" : shop?.isOpen ? "确认下单" : "店铺休息中" }}
-        </button>
-      </view>
+      <CheckoutBar
+        v-if="items.length"
+        :count="items.reduce((sum, item) => sum + item.quantity, 0)"
+        :total="total"
+        name="check"
+        label="确认下单"
+        :loading="submitting"
+        :disabled="submitting || !shop?.isOpen"
+        @action="submit"
+      />
     </template>
   </view>
 </template>
@@ -258,21 +257,29 @@ onLoad((query) => {
   background: #fff0e5;
 }
 
+.pickup > view {
+  min-width: 0;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
 .pickup-title {
   color: var(--color-brand-strong);
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .shop-name {
+  overflow-wrap: anywhere;
   margin-top: 7rpx;
   color: #655a53;
-  font-size: 22rpx;
+  font-size: 11px;
 }
 
 .status {
-  color: #28794a;
-  font-size: 22rpx;
+  flex: none;
+  color: #3f6f78;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -303,7 +310,7 @@ onLoad((query) => {
 
 .item-name {
   overflow: hidden;
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -312,7 +319,7 @@ onLoad((query) => {
 .item-price {
   margin-top: 8rpx;
   color: var(--color-brand-strong);
-  font-size: 24rpx;
+  font-size: 12px;
 }
 
 .remark {
@@ -324,56 +331,14 @@ onLoad((query) => {
   border: 1rpx solid #e5d8ce;
   border-radius: var(--radius-control);
   background: #fffaf6;
-  font-size: 25rpx;
+  font-size: 12.5px;
 }
 
 .remark-count {
   margin-top: 8rpx;
   color: #8d837c;
-  font-size: 20rpx;
+  font-size: 10px;
   text-align: right;
 }
 
-.bottom-bar {
-  position: fixed;
-  right: 28rpx;
-  bottom: calc(24rpx + env(safe-area-inset-bottom));
-  left: 28rpx;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 13rpx 14rpx 13rpx 28rpx;
-  border-radius: 22rpx;
-  background: #2d2824;
-  color: #fff;
-}
-
-.total-label {
-  margin-right: 10rpx;
-  color: #d7cdc6;
-  font-size: 22rpx;
-}
-
-.total {
-  color: #ffb08d;
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.submit-button {
-  height: 72rpx;
-  margin: 0;
-  padding: 0 30rpx;
-  background: var(--color-brand);
-  color: #fff;
-  font-size: 25rpx;
-  line-height: 72rpx;
-}
-
-.submit-button[disabled] {
-  background: #716760;
-  color: #d8cec8;
-  opacity: 1;
-}
 </style>

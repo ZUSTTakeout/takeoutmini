@@ -1,4 +1,4 @@
-const { databaseUrlFromEnv } = require("../dist/database-config");
+const { databaseUrlFromEnv } = require("../dist/database/database-config");
 
 describe("database configuration", () => {
   test("uses an explicit DATABASE_URL when provided", () => {

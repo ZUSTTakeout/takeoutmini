@@ -7,6 +7,7 @@ onLaunch(() => api.restore());
 
 <style>
 @import "./styles/theme.css";
+@import "./styles/vant.css";
 
 page {
   min-height: 100%;

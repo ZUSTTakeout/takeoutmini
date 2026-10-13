@@ -1,4 +1,4 @@
-import "./environment";
+import "./common/environment";
 import "reflect-metadata";
 import { Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";

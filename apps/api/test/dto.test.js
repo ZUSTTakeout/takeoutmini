@@ -2,11 +2,11 @@ require("reflect-metadata");
 
 const { plainToInstance } = require("class-transformer");
 const { validate } = require("class-validator");
+const { CreateOrderDto } = require("../dist/orders/orders.dto");
 const {
-  CreateOrderDto,
   CreateProductDto,
   UpdateProductDto,
-} = require("../dist/dto");
+} = require("../dist/merchant/merchant.dto");
 
 const validateBody = (Type, body) =>
   validate(plainToInstance(Type, body), {

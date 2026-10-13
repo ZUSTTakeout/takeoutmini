@@ -1,4 +1,4 @@
-const { AuthService } = require("../dist/auth");
+const { AuthService } = require("../dist/auth/auth");
 
 describe("JWT secret validation", () => {
   const originalSecret = process.env.JWT_SECRET;

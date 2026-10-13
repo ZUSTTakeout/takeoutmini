@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { onHide, onShow, onUnload } from "@dcloudio/uni-app";
+import IconButton from "../../components/IconButton.vue";
+import { computed, ref } from "vue";
+import OrderSummary from "../../components/OrderSummary.vue";
 import StateView from "../../components/StateView.vue";
+import { usePagePolling } from "../../composables/usePagePolling";
 import { ApiError, api, getErrorMessage } from "../../services/api";
-import type { Order, OrderStatus } from "../../types";
-
-const STATUS_TEXT: Record<OrderStatus, string> = {
-  CREATED: "待接单",
-  ACCEPTED: "制作中",
-  READY: "待取餐",
-  COMPLETED: "已完成",
-  CANCELLED: "已取消",
-};
+import { ACTIVE_STATUSES } from "../../utils/order";
+import { nativeDetail } from "../../utils/events";
+import type { Order } from "../../types";
 
 const orders = ref<Order[]>([]);
 const loading = ref(false);
 const error = ref("");
 const needsStudentLogin = ref(false);
 const cancellingId = ref("");
-let pollTimer: ReturnType<typeof setInterval> | undefined;
+const activeTab = ref("all");
+const orderTabs = [
+  { name: "all", title: "全部" },
+  { name: "active", title: "进行中" },
+  { name: "completed", title: "已完成" },
+  { name: "cancelled", title: "已取消" },
+];
+const visibleOrders = computed(() => orders.value.filter((order) => {
+  if (activeTab.value === "active") return ACTIVE_STATUSES.includes(order.status);
+  if (activeTab.value === "completed") return order.status === "COMPLETED";
+  if (activeTab.value === "cancelled") return order.status === "CANCELLED";
+  return true;
+}));
 
-function stopPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = undefined;
-}
-
-function startPolling() {
-  stopPolling();
-  pollTimer = setInterval(() => {
-    if (!loading.value && orders.value.some((order) =>
-      ["CREATED", "ACCEPTED", "READY"].includes(order.status),
-    )) void load();
-  }, 10_000);
+function changeTab(event: unknown) {
+  const { name } = nativeDetail<{ name: string }>(event);
+  if (orderTabs.some((tab) => tab.name === name)) activeTab.value = name;
 }
 
 function openDetail(order: Order) {
@@ -105,30 +104,42 @@ async function cancel(order: Order) {
   }
 }
 
-onShow(() => {
-  void load();
-  startPolling();
-});
-onHide(stopPolling);
-onUnload(stopPolling);
+usePagePolling(() => {
+  if (
+    !loading.value &&
+    orders.value.some((order) => ACTIVE_STATUSES.includes(order.status))
+  ) void load();
+}, { onPageShow: load });
 </script>
 
 <template>
   <view class="page">
     <view class="page-head">
       <view class="head-row">
-        <view class="title">我的订单</view>
-        <button
-          class="refresh"
-          :disabled="loading"
+        <view>
+          <view class="title">我的订单</view>
+          <view class="order-count">到店自取<text v-if="!loading && !error"> · {{ orders.length }} 笔订单</text></view>
+        </view>
+        <IconButton
+          name="refresh"
+          label="刷新订单状态"
+          :loading="loading"
           @click="load"
-        >
-          刷新状态
-        </button>
+        />
       </view>
-      <view class="subtitle">打开订单页时刷新状态</view>
     </view>
-
+    <van-tabs
+      :active="activeTab"
+      color="#c4532b"
+      title-active-color="#342b25"
+      title-inactive-color="#9b8c80"
+      :line-width="24"
+      :line-height="3"
+      @change="changeTab"
+    >
+      <van-tab v-for="tab in orderTabs" :key="tab.name" :name="tab.name" :title="tab.title" />
+    </van-tabs>
+    <view class="order-content">
     <StateView :loading="loading" />
     <StateView
       v-if="!loading && error"
@@ -138,133 +149,48 @@ onUnload(stopPolling);
     />
     <StateView
       v-else-if="!loading && !error"
-      :empty="orders.length === 0"
-      empty-text="还没有订单"
+      :empty="visibleOrders.length === 0"
+      :empty-text="orders.length ? '这个分类还没有订单' : '还没有订单'"
       action-text="去点餐"
       @action="goBrowse"
     />
 
-    <view
-      v-for="order in orders"
+    <OrderSummary
+      v-for="order in visibleOrders"
       v-show="!loading && !error"
       :key="order.id"
-      class="order"
-      @click="openDetail(order)"
-    >
-      <view class="order-top">
-        <view>
-          <view class="shop-name">{{ order.shop.name }}</view>
-          <view class="order-number">#{{ order.number.slice(-6) }}</view>
-        </view>
-        <text class="status">{{ STATUS_TEXT[order.status] || order.status }}</text>
-      </view>
-      <view class="items">
-        {{ order.items.map((item) => `${item.name} × ${item.quantity}`).join("、") }}
-      </view>
-      <view class="order-foot">
-        <text class="total">{{ api.money(order.total) }}</text>
-        <text
-          v-if="order.status === 'CREATED'"
-          class="cancel-action"
-          role="button"
-          @click.stop="requestCancel(order)"
-        >
-          {{ cancellingId === order.id ? "取消中…" : "取消订单" }}
-        </text>
-      </view>
+      :order="order"
+      show-shop
+      show-cancel
+      clickable
+      :cancelling="cancellingId === order.id"
+      @open="openDetail(order)"
+      @cancel="requestCancel(order)"
+    />
     </view>
   </view>
 </template>
 
 <style scoped>
 .page {
-  padding: 38rpx 32rpx 48rpx;
+  padding: 23px 20px calc(25px + env(safe-area-inset-bottom));
 }
 
 .page-head {
-  padding: 12rpx 4rpx 24rpx;
+  padding: 5px 0 22px;
 }
 
 .head-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
-}
-
-.refresh {
-  flex: none;
-  margin: 0;
-  padding: 0 14rpx;
-  background: transparent;
-  color: var(--color-brand-strong);
-  font-size: 23rpx;
+  gap: 16px;
 }
 
 .title {
-  font-size: 42rpx;
+  font-size: 26px;
   font-weight: 800;
 }
-
-.subtitle {
-  margin-top: 8rpx;
-  color: #81766e;
-  font-size: 23rpx;
-}
-
-.order {
-  margin-top: 20rpx;
-  padding: 26rpx;
-  border: 1rpx solid #eee3da;
-  border-radius: 22rpx;
-  background: #fff;
-}
-
-.order-top,
-.order-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.shop-name {
-  font-size: 29rpx;
-  font-weight: 700;
-}
-
-.order-number {
-  margin-top: 6rpx;
-  color: #887e77;
-  font-size: 20rpx;
-}
-
-.status {
-  color: var(--color-brand-strong);
-  font-size: 24rpx;
-  font-weight: 700;
-}
-
-.items {
-  padding: 24rpx 0;
-  border-bottom: 1rpx solid #eee5de;
-  color: #655c56;
-  font-size: 24rpx;
-  line-height: 1.6;
-}
-
-.order-foot {
-  padding-top: 20rpx;
-}
-
-.total {
-  color: var(--color-brand-strong);
-  font-size: 29rpx;
-  font-weight: 700;
-}
-
-.cancel-action {
-  color: #8e342f;
-  font-size: 23rpx;
-  font-weight: 700;
-}
+.order-count { margin-top: 7px; color: #9b8c80; font-size: 12px; }
+.order-content { padding-top: 20px; }
 </style>
