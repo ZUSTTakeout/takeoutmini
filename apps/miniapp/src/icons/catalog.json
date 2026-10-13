@@ -22,19 +22,23 @@
     "dashboard": "Widget",
     "logout": "Logout",
     "chat": "ChatRoundDots",
-    "search": "Search"
+    "search": "Search",
+    "cup": "TeaCup",
+    "clock": "ClockCircle",
+    "location": "MapPoint",
+    "settings": "Settings"
   },
   "colors": {
-    "text": "#2d2824",
-    "secondary": "#81766e",
-    "brand": "#c4532b",
-    "success": "#3f6f78",
-    "danger": "#b23b34",
+    "text": "#202d46",
+    "secondary": "#7a8498",
+    "brand": "#4163cf",
+    "success": "#397da2",
+    "danger": "#ad477a",
     "white": "#ffffff"
   },
   "tabBar": {
     "names": ["home", "orders", "user"],
-    "color": "#9b9289",
-    "selectedColor": "#f36d3b"
+    "color": "#7a8498",
+    "selectedColor": "#4163cf"
   }
 }

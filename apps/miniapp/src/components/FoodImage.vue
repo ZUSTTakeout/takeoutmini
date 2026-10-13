@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ options: { virtualHost: true } });
 import { ref, watch } from "vue";
 import ReIcon from "./ReIcon.vue";
 import type { ReIconName } from "../icons";
@@ -21,6 +22,7 @@ watch(() => props.src, () => { failed.value = false; });
 </template>
 
 <style scoped>
-.food-image { display: flex; flex: none; align-items: center; justify-content: center; overflow: hidden; border-radius: 12px; background: var(--color-brand-soft); }
-.picture { display: block; width: 100%; height: 100%; }
+.food-image { display: flex; flex: none; align-items: center; justify-content: center; overflow: hidden; border-radius: 14px; background: var(--color-brand-soft); }
+.picture { display: block; width: 100%; height: 100%; animation: content-enter 240ms var(--motion-ease) both; }
+@media (prefers-reduced-motion: reduce) { .picture { animation: none; } }
 </style>

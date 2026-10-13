@@ -1,4 +1,5 @@
 <script setup lang="ts">
+defineOptions({ options: { virtualHost: true } });
 import { computed } from "vue";
 import { getIconColor, type IconName } from "../icons";
 

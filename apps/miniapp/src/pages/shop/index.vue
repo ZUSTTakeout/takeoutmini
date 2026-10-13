@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import FoodImage from "../../components/FoodImage.vue";
+import BusinessStatus from "../../components/BusinessStatus.vue";
+import CategoryRail from "../../components/CategoryRail.vue";
+import ReIcon from "../../components/ReIcon.vue";
 import CheckoutBar from "../../components/CheckoutBar.vue";
 import { computed, ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
@@ -15,6 +19,8 @@ const shopId = ref("");
 const loading = ref(true);
 const error = ref("");
 
+const cover = computed(() => shop.value?.products.find((product) => product.image)?.image);
+const categoryName = computed(() => shop.value?.categories.find((category) => category.id === selectedCategory.value)?.name || "全部菜品");
 const products = computed(() =>
   (shop.value?.products || []).filter(
     (product) =>
@@ -120,170 +126,47 @@ onShow(syncCart);
 </script>
 
 <template>
-  <view class="page">
-    <StateView
-      :loading="loading"
-      :error="error"
-      action-text="重新加载"
-      @action="load"
-    />
-
+  <view class="app-page with-dock shop-page">
+    <StateView :loading="loading" :error="error" action-text="重新加载" @action="load" />
     <template v-if="shop && !loading && !error">
-      <view class="head">
-        <view class="logo">{{ shop.name.slice(0, 1) }}</view>
-        <view class="head-main">
-          <view class="name">{{ shop.name }}</view>
-          <view class="notice">{{ shop.notice || "欢迎光临" }}</view>
+      <view class="shop-header motion-enter">
+        <view class="shop-identity">
+          <FoodImage :src="cover" :size="80" icon="store" />
+          <view class="shop-main"><BusinessStatus :open="shop.isOpen" /><text class="shop-title">{{ shop.name }}</text><view class="shop-meta"><ReIcon name="bag" color="secondary" :size="13" /><text>到店自取</text><text>· {{ shop.products.filter((product) => product.isAvailable).length }} 道菜品</text></view></view>
         </view>
-        <text :class="['shop-status', { closed: !shop.isOpen }]">
-          {{ shop.isOpen ? "营业中" : "休息中" }}
-        </text>
+        <view v-if="shop.notice" class="shop-notice"><ReIcon name="chat" color="brand" :size="16" /><text>{{ shop.notice }}</text></view>
       </view>
-
-      <view v-if="!shop.isOpen" class="closed-banner">
-        <text class="closed-title">店铺休息中，暂时无法加购</text>
-        <text class="closed-note">可以先浏览菜单，营业后再下单</text>
+      <view v-if="!shop.isOpen" class="closed-banner motion-enter"><ReIcon name="clock" color="secondary" :size="18" /><text>店铺休息中，暂时无法加购</text></view>
+      <view class="menu-heading"><text class="menu-label">点餐</text><text class="menu-note">菜单</text></view>
+      <view class="menu-layout">
+        <CategoryRail v-model="selectedCategory" :categories="shop.categories" />
+        <view :key="selectedCategory" class="menu-content">
+          <view class="category-heading"><text>{{ categoryName }}</text><text class="category-count">{{ products.length }}</text></view>
+          <StateView :empty="products.length === 0" empty-text="该分类暂无可售菜品" />
+          <view v-for="(product, index) in products" :key="product.id" class="motion-item" :style="{ animationDelay: Math.min(index, 6) * 40 + 'ms' }"><ProductRow :product="product" :quantity="quantity(product.id)" :disabled="!shop.isOpen" @change="changeQuantity(product, $event)" /></view>
+        </view>
       </view>
-
-      <scroll-view v-if="shop.categories.length" scroll-x class="tabs">
-        <text
-          :class="['tab', { active: selectedCategory === '' }]"
-          @click="selectedCategory = ''"
-        >
-          全部
-        </text>
-        <text
-          v-for="category in shop.categories"
-          :key="category.id"
-          :class="['tab', { active: selectedCategory === category.id }]"
-          @click="selectedCategory = category.id"
-        >
-          {{ category.name }}
-        </text>
-      </scroll-view>
-
-      <StateView
-        :empty="products.length === 0"
-        empty-text="该分类暂无可售菜品"
-      />
-
-      <ProductRow
-        v-for="product in products"
-        :key="product.id"
-        :product="product"
-        :quantity="quantity(product.id)"
-        :disabled="!shop.isOpen"
-        @change="changeQuantity(product, $event)"
-      />
-
-      <CheckoutBar v-if="cart.length && shop.isOpen" :count="itemCount" :total="total" label="去结算" @action="goCart" />
     </template>
+    <CheckoutBar v-if="shop && !loading && !error && cart.length && shop.isOpen" :count="itemCount" :total="total" label="查看购物车" @action="goCart" />
   </view>
 </template>
 
 <style scoped>
-.page {
-  padding: 30rpx 32rpx calc(var(--fixed-action-clearance) + env(safe-area-inset-bottom));
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  padding: 18rpx 0 34rpx;
-}
-
-.logo,
-.picture {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  background: #ffe0c9;
-  color: #ad431f;
-  font-weight: 800;
-}
-
-.logo {
-  width: 96rpx;
-  height: 96rpx;
-  border-radius: 22rpx;
-  font-size: 22px;
-}
-
-.head-main {
-  min-width: 0;
-  flex: 1;
-  margin-left: 22rpx;
-}
-
-.name {
-  overflow-wrap: anywhere;
-  font-size: 19px;
-  font-weight: 800;
-}
-
-.notice {
-  overflow: hidden;
-  margin-top: 9rpx;
-  color: #776c64;
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shop-status {
-  flex: none;
-  margin-left: 18rpx;
-  padding: 6rpx 10rpx;
-  border-radius: 8rpx;
-  background: #e4f3e8;
-  color: #3f6f78;
-  font-size: 10px;
-}
-
-.shop-status.closed {
-  background: #eee8e3;
-  color: #746a63;
-}
-
-.tabs {
-  box-sizing: border-box;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  width: 100%;
-  margin: 6rpx -32rpx 20rpx;
-  padding: 0 32rpx;
-  background: #fffaf4;
-  white-space: nowrap;
-}
-
-.closed-banner {
-  display: flex;
-  margin: -14rpx 0 22rpx;
-  padding: 18rpx 20rpx;
-  flex-direction: column;
-  border-left: 6rpx solid #8e837b;
-  border-radius: 10rpx;
-  background: #f0ece8;
-}
-
-.closed-title { color: #554c46; font-size: 11.5px; font-weight: 700; }
-.closed-note { margin-top: 5rpx; color: #81766e; font-size: 10px; }
-
-.tab {
-  display: inline-block;
-  margin-right: 34rpx;
-  padding: 12rpx 0;
-  border-bottom: 5rpx solid transparent;
-  color: #756b64;
-  font-size: 13.5px;
-}
-
-.tab.active {
-  border-bottom-color: var(--color-brand);
-  color: var(--color-brand-strong);
-  font-weight: 700;
-}
-
+.shop-page { padding: 10px 0 calc(var(--fixed-action-clearance) + env(safe-area-inset-bottom)); }
+.shop-header { padding: 20px; background: var(--color-surface); }
+.shop-identity { display: flex; align-items: center; gap: 16px; }
+.shop-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 7px; }
+.shop-title { color: var(--color-text); font-size: 22px; font-weight: 750; line-height: 1.35; overflow-wrap: anywhere; }
+.shop-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; color: var(--color-text-secondary); font-size: 10px; }
+.shop-notice { display: flex; align-items: flex-start; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--color-border); color: var(--color-text-secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.shop-notice text { min-width: 0; flex: 1; }
+.closed-banner { display: flex; align-items: center; gap: 9px; margin: 14px 20px 0; padding: 13px; border-radius: 12px; background: var(--color-input); color: var(--color-text-secondary); font-size: 12px; }
+.menu-heading { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 14px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.menu-label { padding-bottom: 8px; border-bottom: 3px solid var(--color-brand); color: var(--color-brand); font-size: 15px; font-weight: 750; }
+.menu-note { color: var(--color-text-secondary); font-size: 10px; letter-spacing: 3px; }
+.menu-layout { display: flex; align-items: stretch; }
+.menu-content { min-width: 0; min-height: 400px; box-sizing: border-box; flex: 1; padding: 0 14px 18px; background: var(--color-surface); }
+.category-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 19px 0 3px; color: var(--color-text); font-size: 13px; font-weight: 650; }
+.category-count { color: var(--color-text-secondary); font-size: 10px; font-weight: 400; }
+@media (max-width: 350px) { .menu-content { padding-right: 11px; padding-left: 11px; } }
 </style>

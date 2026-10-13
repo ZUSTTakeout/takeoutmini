@@ -16,7 +16,7 @@ function wechatCode() {
 
 export const authApi = {
   get devAuthEnabled() {
-    return import.meta.env.VITE_DEV_AUTH_ENABLED === "true" || import.meta.env.DEV;
+    return import.meta.env.VITE_MOCK_ENABLED === "true" || import.meta.env.VITE_DEV_AUTH_ENABLED === "true" || import.meta.env.DEV;
   },
   isRole(role: LoginRole) {
     return Boolean(session.token && session.user?.role === role);
@@ -30,7 +30,7 @@ export const authApi = {
     return session.save(auth);
   },
   async loginWithWechat() {
-    const code = await wechatCode();
+    const code = import.meta.env.VITE_MOCK_ENABLED === "true" ? "mock-wechat-code" : await wechatCode();
     const auth = await request<AuthResponse>("/auth/wechat", {
       method: "POST",
       data: { code },

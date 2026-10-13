@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import { computed } from "vue";
+defineOptions({ options: { virtualHost: true } });
 import type { OrderStatus } from "../types";
 import { STATUS_TEXT } from "../utils/order";
-
-const props = defineProps<{ status: OrderStatus }>();
-
-const tone = computed(() => {
-  if (props.status === "READY") return { background: "#fff0e5", text: "#b6532c" };
-  if (props.status === "COMPLETED") return { background: "#eaf0f8", text: "#466a95" };
-  if (props.status === "CANCELLED") return { background: "#f1eeeb", text: "#82766f" };
-  return { background: "#fff3dd", text: "#9d691c" };
-});
+defineProps<{ status: OrderStatus }>();
 </script>
 
 <template>
-  <van-tag :color="tone.background" :text-color="tone.text" size="medium" round>
-    {{ STATUS_TEXT[status] }}
-  </van-tag>
+  <view :class="['order-status', status.toLowerCase()]"><view class="status-dot" /><text>{{ STATUS_TEXT[status] }}</text></view>
 </template>
+
+<style scoped>
+.order-status { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 7px; background: var(--color-brand-soft); color: var(--color-brand); font-size: 10px; font-weight: 650; white-space: nowrap; transition: background var(--motion-normal), color var(--motion-normal); }
+.status-dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: currentColor; }
+.accepted { background: var(--color-success-soft); color: var(--color-success); }
+.ready { background: var(--color-accent-soft); color: var(--color-accent); }
+.ready .status-dot { animation: status-breathe 1800ms ease-in-out infinite; }
+.completed { background: var(--color-success-soft); color: var(--color-success); }
+.cancelled { background: var(--color-input); color: var(--color-text-secondary); }
+@media (prefers-reduced-motion: reduce) { .order-status { transition: none; } .status-dot { animation: none !important; } }
+</style>

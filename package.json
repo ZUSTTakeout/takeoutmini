@@ -8,10 +8,12 @@
     "db:push": "node scripts/prisma-db-push.mjs",
     "icons:generate": "npm --prefix apps/miniapp run icons:generate",
     "build": "npm --prefix apps/api run build && npm --prefix apps/miniapp run build:mp-weixin",
-    "lint": "npm --prefix apps/api run lint && npm --prefix apps/miniapp run lint && npm --prefix apps/api run typecheck && npm --prefix apps/miniapp run typecheck && node --check scripts/smoke.mjs && node --check scripts/prisma-db-push.mjs && node --check apps/miniapp/scripts/generate-icons.mjs",
+    "lint": "npm --prefix apps/api run lint && npm --prefix apps/miniapp run lint && npm --prefix apps/api run typecheck && npm --prefix apps/miniapp run typecheck && node --check scripts/smoke.mjs && node --check scripts/prisma-db-push.mjs && node --check apps/miniapp/scripts/generate-icons.mjs && node --check apps/miniapp/scripts/build-mock.mjs && node --check apps/miniapp/scripts/check-mock.mjs",
     "dev:api": "npm --prefix apps/api run start:dev",
     "dev:miniapp": "npm --prefix apps/miniapp run dev:mp-weixin",
     "test:api": "npm --prefix apps/api test",
-    "test:smoke": "node scripts/smoke.mjs"
+    "test:smoke": "node scripts/smoke.mjs",
+    "build:mock": "npm --prefix apps/miniapp run build:mock",
+    "test:mock": "npm --prefix apps/miniapp run test:mock"
   }
 }

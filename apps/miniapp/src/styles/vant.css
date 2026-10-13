@@ -1,26 +1,7 @@
-/* Vant native components accept page-level classes via addGlobalClass. */
-.compact-empty.van-empty {
-  padding: 30px 0;
-}
-
-.compact-empty .van-empty__image {
-  height: 60px;
-  width: 60px;
-}
-
-.compact-empty .van-empty__description {
-  max-width: 280px;
-  padding: 0 16px;
-  font-size: 13px;
-  line-height: 22px;
-}
-
-.quantity-plus {
-  background: var(--color-brand) !important;
-  color: #fff !important;
-}
-
-.quantity-minus {
-  border-color: var(--color-brand) !important;
-  color: var(--color-brand) !important;
+.compact-empty.van-empty { padding: 26px 0; }
+.compact-empty .van-empty__image { height: 60px; width: 60px; }
+.compact-empty .van-empty__description { max-width: 280px; padding: 0 16px; color: var(--color-text-secondary); font-size: 13px; line-height: 22px; }
+.van-popup--bottom { border-radius: 24px 24px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .van-popup, .van-overlay { transition: none !important; animation: none !important; }
 }

@@ -74,6 +74,22 @@ npm --prefix apps/miniapp run build:mp-weixin
 
 微信开发者工具导入 `apps/miniapp/dist/build/mp-weixin`。真机调试时需要通过构建环境变量 `VITE_API_BASE_URL` 指向已配置合法域名的 HTTPS API。
 
+## Mock 预览
+
+```powershell
+npm run build:mock
+```
+
+微信开发者工具导入 `apps/miniapp/dist/build/mp-weixin-mock`。该构建包含 6 家店铺、24 件商品、不同状态的订单、本地商品图片和初始购物车，首次使用自动进入学生账号。在「我的」中使用「商户登录」进入商户工作台，也可切回学生账号。下单、取消、接单、取餐、商品编辑和营业设置均保存到本地，重新编译后保留修改。
+
+Mock 会话、购物车和订单使用独立存储；`npm run build` 仍然构建连接 API 的版本。如需重置示例数据，在开发者工具中仅移除 `mock:v1:` 开头的存储项。
+
+```powershell
+npm run test:mock
+```
+
+图片来源记录在 `apps/miniapp/docs/mock-assets.md`。
+
 ## 完整 Docker 启动
 
 ```powershell

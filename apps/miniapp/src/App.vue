@@ -7,13 +7,17 @@ onLaunch(() => api.restore());
 
 <style>
 @import "./styles/theme.css";
+@import "./styles/layout.css";
+@import "./styles/motion.css";
 @import "./styles/vant.css";
 
 page {
   min-height: 100%;
-  background: #fffaf4;
+  background: var(--color-background);
   color: var(--color-text);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--font-body);
+  line-height: 1.5;
 }
 
 button {

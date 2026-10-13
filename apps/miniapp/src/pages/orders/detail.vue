@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
+import PageHeading from "../../components/PageHeading.vue";
 import OrderProgress from "../../components/OrderProgress.vue";
 import StateView from "../../components/StateView.vue";
 import IconButton from "../../components/IconButton.vue";
@@ -61,79 +62,55 @@ onShow(() => {
 </script>
 
 <template>
-  <view class="page">
-    <view class="page-head">
-      <text class="page-title">订单详情</text>
-      <IconButton name="refresh" label="刷新订单详情" :loading="loading" @click="load" />
-    </view>
+  <view class="app-page">
+    <PageHeading title="订单详情" :eyebrow="merchantView ? '商户中心' : '食巷'"><IconButton name="refresh" label="刷新订单详情" :loading="loading" variant="secondary" @click="load" /></PageHeading>
     <StateView :loading="loading" />
-    <StateView
-      v-if="!loading && error"
-      :error="error"
-      action-text="重新加载"
-      @action="load"
-    />
+    <StateView v-if="!loading && error" :error="error" action-text="重新加载" @action="load" />
     <template v-if="order && !loading && !error">
       <OrderProgress :order="order" />
-      <view class="receipt">
-        <van-cell
-          :title="order.shop.name"
-          label="到店自取"
-          :border="false"
-          :clickable="!merchantView"
-          center
-          title-style="font-size: 17px; font-weight: 700;"
-          custom-style="padding: 0; background: transparent;"
-          @click="openShop"
-        >
-          <view slot="icon" class="shop-symbol"><ReIcon name="store" color="brand" :size="25" /></view>
-          <view v-if="!merchantView" slot="right-icon" class="shop-arrow"><ReIcon name="chevron-right" color="secondary" :size="19" /></view>
-        </van-cell>
-        <van-divider custom-style="margin: 22px 0 15px; border-color: #eee7df;" />
-        <view class="receipt-section">
-          <view class="section-title">商品明细</view>
-          <view v-for="item in order.items" :key="item.id" class="item-row">
-            <text class="item-name">{{ item.name }}</text>
-            <text class="item-quantity">×{{ item.quantity }}</text>
-            <text class="item-price">{{ formatMoney(item.price * item.quantity) }}</text>
-          </view>
-          <van-divider custom-style="margin: 16px 0; border-color: #eee7df;" />
-          <view class="total-row"><text>订单合计</text><text class="total">{{ formatMoney(order.total) }}</text></view>
+      <view class="receipt motion-enter">
+        <view class="receipt-shop" :role="!merchantView ? 'button' : undefined" @click="openShop">
+          <view class="shop-symbol"><ReIcon name="store" color="brand" :size="24" /></view>
+          <view class="shop-main"><text class="shop-name">{{ order.shop.name }}</text><text class="shop-caption">到店自取</text></view>
+          <IconButton v-if="!merchantView" name="chevron-right" label="进入店铺" compact @click="openShop" />
         </view>
-        <van-divider custom-style="margin: 23px 0; border-color: #eee7df;" />
-        <view class="receipt-section">
-          <view class="section-title">订单信息</view>
-          <view class="info-row"><text class="info-label">订单编号</text><text class="info-value number">{{ order.number }}</text></view>
-          <view class="info-row"><text class="info-label">下单时间</text><text class="info-value">{{ formatDate(order.createdAt) }}</text></view>
-          <view class="info-row"><text class="info-label">取餐方式</text><text class="info-value">到店自取</text></view>
-          <view class="info-row"><text class="info-label">备注</text><text class="info-value">{{ order.remark || '无' }}</text></view>
-        </view>
-        <view v-if="order.status === 'READY'" class="pickup-note">
-          <ReIcon name="bag" color="brand" :size="17" />
-          <text>请向商户出示本页取餐</text>
-        </view>
+        <view class="hairline" />
+        <view class="receipt-label">商品明细</view>
+        <view v-for="item in order.items" :key="item.id" class="item-row"><text class="item-name">{{ item.name }}</text><text class="item-quantity">×{{ item.quantity }}</text><text class="item-price">{{ formatMoney(item.price * item.quantity) }}</text></view>
+        <view class="total-row"><text>订单合计</text><text class="total">{{ formatMoney(order.total) }}</text></view>
+        <view class="receipt-cut"><view class="cut-line" /></view>
+        <view class="receipt-label">订单信息</view>
+        <view class="info-row"><text class="info-label">订单编号</text><text class="info-value number" user-select>{{ order.number }}</text></view>
+        <view class="info-row"><text class="info-label">下单时间</text><text class="info-value">{{ formatDate(order.createdAt) }}</text></view>
+        <view class="info-row"><text class="info-label">取餐方式</text><text class="info-value">到店自取</text></view>
+        <view class="info-row"><text class="info-label">备注</text><text class="info-value">{{ order.remark || '无' }}</text></view>
+        <view v-if="order.status === 'READY'" class="pickup-note"><ReIcon name="bag" color="danger" :size="18" /><text>请向商户出示本页取餐</text></view>
       </view>
+      <view v-if="!merchantView" class="reorder-row"><text>再逛逛这家店</text><IconButton name="arrow-right" label="返回店铺点餐" variant="primary" @click="openShop" /></view>
     </template>
   </view>
 </template>
 
 <style scoped>
-.page { padding: 22px 20px calc(30px + env(safe-area-inset-bottom)); }
-.page-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 24px; }
-.page-title { font-size: 23px; font-weight: 800; }
-.receipt { padding: 21px; border: 1px solid var(--color-border); border-radius: 18px; background: #fffdfa; }
-.shop-symbol { display: flex; width: 47px; height: 47px; flex: none; align-items: center; justify-content: center; margin-right: 13px; border-radius: 12px; background: #f9eadb; }
-.shop-arrow { display: flex; align-items: center; margin-left: 8px; }
-.section-title { margin-bottom: 15px; color: #9c8b7d; font-size: 12px; font-weight: 500; }
-.item-row { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; color: #493c32; font-size: 14px; line-height: 1.6; }
+.receipt { padding: 22px 20px; border-radius: var(--radius-card); background: var(--color-surface); }
+.receipt-shop { display: flex; align-items: center; gap: 12px; }
+.shop-symbol { display: flex; width: 46px; height: 46px; flex: none; align-items: center; justify-content: center; border-radius: 14px; background: var(--color-brand-soft); }
+.shop-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 5px; }
+.shop-name { color: var(--color-text); font-size: 16px; font-weight: 750; overflow-wrap: anywhere; }
+.shop-caption, .receipt-label { color: var(--color-text-secondary); font-size: 11px; }
+.receipt-label { margin-bottom: 11px; }
+.item-row { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; color: var(--color-text); font-size: 13px; line-height: 1.6; }
 .item-name { min-width: 0; flex: 1; overflow-wrap: anywhere; }
-.item-quantity { flex: none; color: #9b8b7d; font-size: 12px; }
-.item-price { flex: none; min-width: 61px; text-align: right; font-weight: 500; }
-.total-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; color: #58483b; font-size: 14px; }
-.total { flex: none; color: var(--color-brand-strong); font-size: 24px; font-weight: 750; }
-.info-row { display: flex; align-items: baseline; gap: 16px; margin-top: 14px; font-size: 12px; line-height: 1.65; }
-.info-label { width: 61px; flex: none; color: #a08f81; }
-.info-value { min-width: 0; flex: 1; color: #726153; overflow-wrap: anywhere; }
-.number { font-size: 11px; }
-.pickup-note { display: flex; align-items: center; gap: 7px; margin-top: 24px; color: #b15a31; font-size: 12px; line-height: 1.5; }
+.item-quantity { flex: none; color: var(--color-text-secondary); font-size: 11px; }
+.item-price { flex: none; min-width: 62px; text-align: right; font-weight: 600; }
+.total-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; padding-top: 17px; border-top: 1px solid var(--color-border); font-size: 12px; }
+.total { color: var(--color-accent); font-size: 24px; font-weight: 750; }
+.receipt-cut { padding: 24px 0; }
+.cut-line { border-top: 1px dashed #ced6e7; }
+.info-row { display: flex; align-items: baseline; gap: 15px; margin-top: 13px; font-size: 12px; line-height: 1.6; }
+.info-label { width: 58px; flex: none; color: var(--color-text-secondary); }
+.info-value { min-width: 0; flex: 1; color: #536079; overflow-wrap: anywhere; }
+.number { font-size: 11px; font-variant-numeric: tabular-nums; }
+.pickup-note { display: flex; align-items: center; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--color-border); color: var(--color-accent); font-size: 12px; }
+.reorder-row { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px; color: var(--color-brand); font-size: 12px; }
 </style>

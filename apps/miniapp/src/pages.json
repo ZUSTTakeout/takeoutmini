@@ -2,8 +2,8 @@
     "globalStyle": {
         "navigationBarTextStyle": "black",
         "navigationBarTitleText": "校园美食街",
-        "navigationBarBackgroundColor": "#fffaf4",
-        "backgroundColor": "#fffaf4",
+        "navigationBarBackgroundColor": "#f4f6fb",
+        "backgroundColor": "#f4f6fb",
         "usingComponents": {
             "van-button": "/wxcomponents/vant/button/index",
             "van-loading": "/wxcomponents/vant/loading/index",
@@ -46,7 +46,7 @@
         {
             "path": "pages/cart/index",
             "style": {
-                "navigationBarTitleText": "确认订单"
+                "navigationBarTitleText": "购物车"
             }
         },
         {
@@ -99,8 +99,8 @@
         }
     ],
     "tabBar": {
-        "color": "#9b9289",
-        "selectedColor": "#f36d3b",
+        "color": "#7a8498",
+        "selectedColor": "#4163cf",
         "backgroundColor": "#fff",
         "list": [
             {

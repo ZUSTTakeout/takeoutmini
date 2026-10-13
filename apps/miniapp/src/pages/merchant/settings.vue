@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { onShow } from "@dcloudio/uni-app";
-import IconButton from "../../components/IconButton.vue";
+import PageHeading from "../../components/PageHeading.vue";
+import ActionDock from "../../components/ActionDock.vue";
+import { iconColors } from "../../icons";
 import ReIcon from "../../components/ReIcon.vue";
 import StateView from "../../components/StateView.vue";
 import { api, getErrorMessage } from "../../services/api";
@@ -41,21 +43,32 @@ onShow(load);
 </script>
 
 <template>
-  <view class="page">
-    <view class="heading"><view><text class="eyebrow">店铺管理</text><view class="title">营业设置</view></view><IconButton name="save" label="保存营业设置" variant="primary" :loading="saving" :disabled="loading || Boolean(error) || original === JSON.stringify(draft)" @click="save" /></view>
+  <view class="app-page with-dock">
+    <PageHeading title="营业设置" eyebrow="店铺管理" />
     <StateView :loading="loading" :error="error" action-text="重新加载" @action="load" />
     <template v-if="!loading && !error">
-      <van-cell-group :border="false"><van-cell title="营业状态" :value="draft.isOpen ? '营业中' : '休息中'" center custom-style="padding:20px 16px;"><template #right-icon><view class="status-switch"><van-switch :checked="draft.isOpen" active-color="#c4532b" inactive-color="#dfd9d2" size="24px" :disabled="saving" @change="draft.isOpen = Boolean(nativeDetail($event))" /></view></template></van-cell></van-cell-group>
-      <view class="section-title">店铺信息</view>
-      <van-cell-group :border="false"><van-field :value="draft.name" label="店铺名称" placeholder="填写店铺名称" :maxlength="60" :disabled="saving" custom-style="padding:18px 16px;" @change="draft.name = nativeValue($event)" /></van-cell-group>
-      <view class="section-heading"><text class="section-title">店铺公告</text><ReIcon name="chat" color="secondary" :size="18" /></view>
-      <van-cell-group :border="false"><van-field :value="draft.notice" type="textarea" placeholder="填写店铺公告" :maxlength="200" show-word-limit :autosize="{ minHeight: 120 }" :disabled="saving" :border="false" custom-style="padding:20px 16px;" @change="draft.notice = nativeValue($event)" /></van-cell-group>
+      <view class="surface setting-state motion-enter">
+        <view class="setting-icon"><ReIcon name="store" color="brand" :size="24" /></view>
+        <view class="setting-main"><text class="setting-label">营业状态</text><text class="setting-value">{{ draft.isOpen ? '营业中' : '休息中' }}</text></view>
+        <van-switch :checked="draft.isOpen" :active-color="iconColors.brand" inactive-color="#dbe1ee" size="26px" :disabled="saving" @change="draft.isOpen = Boolean(nativeDetail($event))" />
+      </view>
+      <view class="form-section motion-enter"><text class="form-label">店铺名称</text><input class="form-input name-input" :value="draft.name" placeholder="填写店铺名称" aria-label="店铺名称" :maxlength="60" :disabled="saving" @input="draft.name = nativeValue($event)" /></view>
+      <view class="pickup-method motion-enter"><ReIcon name="bag" color="success" :size="23" /><text>到店自取</text><ReIcon name="check" color="success" :size="18" /></view>
+      <view class="form-section motion-enter"><view class="notice-heading"><text class="form-label">店铺公告</text><ReIcon name="chat" color="secondary" :size="19" /></view><textarea class="form-input notice-input" :value="draft.notice" placeholder="填写店铺公告" aria-label="店铺公告" :maxlength="200" :disabled="saving" @input="draft.notice = nativeValue($event)" /><view class="character-count">{{ draft.notice.length }}/200</view></view>
     </template>
+    <ActionDock v-if="!loading && !error" name="save" label="保存设置" :note="original === JSON.stringify(draft) ? '已保存' : '有待保存的修改'" :loading="saving" :disabled="original === JSON.stringify(draft)" @action="save" />
   </view>
 </template>
 
 <style scoped>
-.page { padding: 28rpx 30rpx calc(40rpx + env(safe-area-inset-bottom)); }.heading, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; }
-.heading { margin-bottom: 30rpx; }.eyebrow { color: #a43e1d; font-size: 10px; font-weight: 650; letter-spacing: 1px; }.title { margin-top: 8rpx; font-size: 22px; font-weight: 800; }
-.section-title { margin: 34rpx 0 18rpx; font-size: 14px; font-weight: 750; }.status-switch { display: flex; align-items: center; padding-left: 18rpx; }.section-heading { margin-top: 30rpx; }.section-heading .section-title { margin: 0 0 18rpx; }
+.setting-state { display: flex; align-items: center; gap: 13px; padding: 20px; }
+.setting-icon { display: flex; width: 43px; height: 43px; flex: none; align-items: center; justify-content: center; border-radius: 13px; background: var(--color-brand-soft); }
+.setting-main { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 6px; }
+.setting-label { color: var(--color-text); font-size: 14px; font-weight: 650; }
+.setting-value { color: var(--color-text-secondary); font-size: 11px; }
+.name-input { height: 50px; }
+.pickup-method { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 20px; border-radius: var(--radius-card); background: var(--color-surface); color: var(--color-text); font-size: 14px; font-weight: 600; }
+.pickup-method text { min-width: 0; flex: 1; }
+.notice-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.notice-input { height: 150px; }
 </style>

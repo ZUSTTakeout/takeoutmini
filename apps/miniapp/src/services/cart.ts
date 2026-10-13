@@ -1,8 +1,9 @@
+import { STORAGE_PREFIX } from "../config/runtime";
 import type { CartItem, Product } from "../types";
 
-const CART_PREFIX = "cart:";
-const CHECKOUT_PREFIX = "checkout:";
-const REMARK_PREFIX = "checkout-remark:";
+const CART_PREFIX = `${STORAGE_PREFIX}cart:`;
+const CHECKOUT_PREFIX = `${STORAGE_PREFIX}checkout:`;
+const REMARK_PREFIX = `${STORAGE_PREFIX}checkout-remark:`;
 const MAX_QUANTITY = 99;
 
 interface CheckoutAttempt {

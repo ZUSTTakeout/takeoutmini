@@ -1,3 +1,4 @@
+import { mockRequest } from "../mock";
 import { ApiError } from "./errors";
 import { session } from "./session";
 
@@ -23,6 +24,9 @@ export function request<T>(path: string, config: RequestConfig = {}) {
   const authenticated = config.authenticated !== false;
   if (authenticated && !session.token) {
     return Promise.reject(new ApiError("请先登录", 401));
+  }
+  if (import.meta.env.VITE_MOCK_ENABLED === "true") {
+    return mockRequest<T>(path, config, session.user);
   }
   const requestToken = session.token;
   // uni-app 的声明未包含 PATCH，实际请求接口支持该方法。

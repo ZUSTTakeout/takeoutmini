@@ -1,8 +1,9 @@
+import { STORAGE_PREFIX } from "../config/runtime";
 import type { User } from "../types";
 import { ApiError } from "./errors";
 
-const TOKEN_KEY = "token";
-const USER_KEY = "user";
+const TOKEN_KEY = `${STORAGE_PREFIX}token`;
+const USER_KEY = `${STORAGE_PREFIX}user`;
 
 export interface AuthResponse {
   token: string;
@@ -31,6 +32,13 @@ export const session = {
     return currentUser;
   },
   restore() {
+    if (import.meta.env.VITE_MOCK_ENABLED === "true" && !uni.getStorageSync("mock:v1:session-initialized")) {
+      uni.setStorageSync("mock:v1:session-initialized", true);
+      return session.save({
+        token: "mock-student",
+        user: { id: "mock-student", nickname: "林小满", role: "STUDENT" },
+      });
+    }
     const savedToken = uni.getStorageSync(TOKEN_KEY);
     const savedUser = uni.getStorageSync(USER_KEY);
     if (typeof savedToken === "string" && savedToken && isUser(savedUser)) {
