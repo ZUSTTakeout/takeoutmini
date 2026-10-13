@@ -2,11 +2,13 @@
 defineOptions({ options: { virtualHost: true } });
 import { computed } from "vue";
 import ReIcon from "./ReIcon.vue";
-import { ORDER_STEPS, STATUS_TEXT } from "../utils/order";
+import { ORDER_STEPS, isPendingPayment, orderStatusText } from "../utils/order";
 import type { Order } from "../types";
 const props = defineProps<{ order: Order }>();
-const currentStep = computed(() => ORDER_STEPS.findIndex((step) => step.status === props.order.status));
-const statusNote = computed(() => ({
+const steps = computed(() => props.order.paymentStatus === "NOT_REQUIRED"
+  ? ORDER_STEPS : [{ status: "PAYMENT", label: "付款" }, ...ORDER_STEPS]);
+const currentStep = computed(() => isPendingPayment(props.order) ? 0 : steps.value.findIndex((step) => step.status === props.order.status));
+const statusNote = computed(() => isPendingPayment(props.order) ? "付款后商户开始准备餐点" : ({
   CREATED: "等待商户确认餐点", ACCEPTED: "餐点正在制作中", READY: "餐点已备好，请到店取餐",
   COMPLETED: "本次取餐已完成", CANCELLED: "本次订单已取消",
 }[props.order.status]));
@@ -16,11 +18,11 @@ const statusNote = computed(() => ({
   <view :class="['order-progress', { cancelled: order.status === 'CANCELLED', ready: order.status === 'READY' }]">
     <view class="status-heading">
       <view class="status-icon"><ReIcon :name="order.status === 'CANCELLED' ? 'close' : order.status === 'COMPLETED' ? 'check' : 'bag'" color="brand" :size="26" /></view>
-      <view class="status-main"><text class="status-title">{{ STATUS_TEXT[order.status] }}</text><text class="status-note">{{ statusNote }}</text></view>
+      <view class="status-main"><text class="status-title">{{ orderStatusText(order) }}</text><text class="status-note">{{ statusNote }}</text></view>
     </view>
     <view v-if="order.status !== 'CANCELLED'" class="progress-track">
-      <view v-for="(step, index) in ORDER_STEPS" :key="step.status" :class="['progress-step', { done: index <= currentStep, current: index === currentStep }]">
-        <view class="step-top"><view class="step-dot"><ReIcon v-if="index < currentStep || order.status === 'COMPLETED'" name="check" color="inherit" :size="12" /><text v-else>{{ index + 1 }}</text></view><view v-if="index < ORDER_STEPS.length - 1" class="step-line" /></view>
+      <view v-for="(step, index) in steps" :key="step.status" :class="['progress-step', { done: index <= currentStep, current: index === currentStep }]">
+        <view class="step-top"><view class="step-dot"><ReIcon v-if="index < currentStep || order.status === 'COMPLETED'" name="check" color="inherit" :size="12" /><text v-else>{{ index + 1 }}</text></view><view v-if="index < steps.length - 1" class="step-line" /></view>
         <text class="step-label">{{ step.label }}</text>
       </view>
     </view>

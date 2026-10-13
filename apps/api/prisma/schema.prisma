@@ -21,6 +21,18 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  NOT_REQUIRED
+  PENDING
+  PAID
+  CLOSED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  TEST
+}
+
 model User {
   id            String   @id @default(cuid()) @db.VarChar(30)
   nickname      String   @db.VarChar(60)
@@ -99,6 +111,11 @@ model Order {
   idempotencyKey String      @db.VarChar(128)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  paymentStatus  PaymentStatus @default(NOT_REQUIRED)
+  paymentMethod  PaymentMethod?
+  paymentReference String?    @db.VarChar(64)
+  paidAt         DateTime?
+  refundedAt     DateTime?
 
   @@unique([studentId, idempotencyKey])
   @@index([studentId, createdAt])

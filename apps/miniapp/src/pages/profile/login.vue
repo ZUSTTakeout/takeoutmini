@@ -8,7 +8,7 @@ import { api, getErrorMessage } from "../../services/api";
 import type { LoginRole } from "../../types";
 const busy = ref("");
 const moreLogin = ref(false);
-const showDevLogin = import.meta.env.DEV || import.meta.env.VITE_MOCK_ENABLED === "true";
+const showDevLogin = api.devAuthEnabled;
 async function login(role?: LoginRole) {
   if (busy.value) return;
   busy.value = role || "wechat";

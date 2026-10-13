@@ -1,7 +1,7 @@
 import type { CreateOrderInput, LoginRole, OrderStatus, Product, Shop, User } from "../types";
 import { ApiError } from "../services/errors";
 import { MOCK_MERCHANT, MOCK_STUDENT } from "./fixtures";
-import { createOrder, transitionOrder } from "./orders";
+import { createOrder, payTestOrder, transitionOrder } from "./orders";
 import { clone, getState, publicOrder, saveState, type MockState } from "./store";
 
 export interface MockRequestConfig { method?: "GET" | "POST" | "PATCH"; data?: unknown }
@@ -62,7 +62,7 @@ export function dispatchMockRequest(path: string, config: MockRequestConfig, use
         if (typeof patch.isOpen === "boolean") shop.isOpen = patch.isOpen;
         result = shop;
       } else if (segments[1] === "orders" && method === "GET") {
-        const orders = state.orders.filter((order) => order.shop.id === shop.id);
+        const orders = state.orders.filter((order) => order.shop.id === shop.id && order.paymentStatus !== "PENDING");
         result = segments[2] ? publicOrder(orders.find((order) => order.id === segments[2]) ?? missingOrder()) : orders.map(publicOrder);
       } else if (path === "/merchant/stats" && method === "GET") {
         const completed = state.orders.filter((order) => order.shop.id === shop.id && order.status === "COMPLETED");
@@ -78,11 +78,15 @@ export function dispatchMockRequest(path: string, config: MockRequestConfig, use
       } else if (segments[1] === "products" && (method === "POST" || method === "PATCH")) {
         result = saveProduct(state, shop, config.data as Partial<Product>, segments[2]);
       } else throw new ApiError("请求不存在", 404);
+    } else if (path === "/auth/me" && method === "GET") {
+      result = user;
     } else if (path === "/orders" && method === "GET") {
       if (user.role !== "STUDENT") throw new ApiError("请使用学生账号查看订单", 403);
       result = state.orders.filter((order) => order.studentId === user.id).map(publicOrder);
     } else if (path === "/orders" && method === "POST") {
       result = createOrder(state, user, config.data as CreateOrderInput);
+    } else if (segments[0] === "orders" && segments[2] === "pay" && segments[3] === "test" && method === "POST") {
+      result = payTestOrder(state, user, segments[1]);
     } else if (segments[0] === "orders" && segments[2] === "status" && method === "PATCH") {
       result = transitionOrder(state, user, segments[1], (config.data as { status: OrderStatus }).status);
     } else if (segments[0] === "orders" && segments.length === 2 && method === "GET") {

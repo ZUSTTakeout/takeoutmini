@@ -1,4 +1,4 @@
-import type { LoginRole } from "../types";
+import type { LoginRole, User } from "../types";
 import { ApiError } from "./errors";
 import { request } from "./http";
 import { session, type AuthResponse } from "./session";
@@ -7,6 +7,7 @@ function wechatCode() {
   return new Promise<string>((resolve, reject) => {
     uni.login({
       provider: "weixin",
+      timeout: 10_000,
       success: ({ code }) =>
         code ? resolve(code) : reject(new ApiError("微信登录未返回有效凭证")),
       fail: () => reject(new ApiError("微信登录失败，请稍后重试")),
@@ -37,5 +38,13 @@ export const authApi = {
       authenticated: false,
     });
     return session.save(auth);
+  },
+  async refreshUser() {
+    const token = session.token;
+    if (!token) return null;
+    const user = await request<User>("/auth/me");
+    // 后台校验期间用户可能已退出或切换账号。
+    if (session.token !== token) return session.user;
+    return session.save({ token, user });
   },
 };

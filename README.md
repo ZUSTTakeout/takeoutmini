@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 学生端：浏览营业店铺和分类商品、按店购物车、库存校验、线下自取下单、查看和取消订单。
+- 学生端：微信登录、浏览营业店铺和分类商品、按店购物车、库存校验、自取下单、本地测试支付、查看和取消订单。
 - 商户端：演示登录、营业状态、订单流转和经营统计；API 提供商品与分类管理接口。
 - API：NestJS、TypeScript、Prisma、MySQL 8、JWT/RBAC、订单幂等和事务扣减库存。
 - 小程序：uni-app、Vue 3、TypeScript，核心流程请求真实 API。
@@ -17,6 +17,7 @@ apps/
     auth/          登录、身份校验
     shops/         店铺和菜单
     orders/        订单、状态规则
+    payments/      测试支付、幂等确认
     merchant/      商户经营与商品管理
     health/        健康检查
     database/      Prisma 与数据库配置
@@ -74,6 +75,22 @@ npm --prefix apps/miniapp run build:mp-weixin
 
 微信开发者工具导入 `apps/miniapp/dist/build/mp-weixin`。真机调试时需要通过构建环境变量 `VITE_API_BASE_URL` 指向已配置合法域名的 HTTPS API。
 
+## 微信登录与测试支付
+
+根目录 `.env` 填写 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`，并设置 `TEST_PAYMENT_ENABLED=true`、`NODE_ENV=development`。AppSecret 仅供 API 使用，不放入小程序环境变量或前端源码。修改后重新启动已构建的 API。
+
+小程序构建的 AppID 优先读取 `VITE_WECHAT_APP_ID`，未指定时沿用仓库根目录 `project.config.json` 中的 AppID；该文件属于本地配置，不提交到 Git。小程序 AppID 必须与 API 的 `WECHAT_APP_ID` 一致。微信入口使用 [`uni.login`](https://uniapp.dcloud.net.cn/api/plugins/login.html) 取得一次性 code，由 API 调用 [`code2Session`](https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html) 验证身份：首次登录注册学生账号，已绑定商户按数据库中的身份登录；不会通过客户端选择身份来获得商户权限。
+
+已有数据库先运行 `npm run db:push` 添加支付字段，原订单保留原有流程。新订单先显示“待付款”，确认后执行服务端测试支付，不调用微信收银台、不实际扣款。已付订单才进入商户待接单列表。可从订单列表的“待付款”继续付款，取消时关闭支付或撤销已完成的测试支付，并在同一事务中回补库存。支付结果和金额以服务端订单为准，重复点击或网络重试不会重复付款。
+
+`POST /api/orders/:id/pay/test` 仅允许订单所属学生调用；`GET /api/auth/me` 返回当前账号公开信息。设置 `TEST_PAYMENT_ENABLED=false` 或 `NODE_ENV=production` 后，测试支付与新的测试下单都不可用；历史订单仍可查询。当前实现仅供测试，真实微信收款和退款需另行接入。
+
+```powershell
+npm --prefix apps/miniapp run test:payment-auth
+npm --prefix apps/miniapp run test:checkout
+npm run test:smoke
+```
+
 ## Mock 预览
 
 ```powershell
@@ -111,7 +128,7 @@ npm run test:api
 npm run test:smoke
 ```
 
-`lint` 会对 API TypeScript/测试文件和小程序 TypeScript/Vue SFC 执行 ESLint，再运行 TypeScript/Vue 类型检查并校验 smoke 脚本语法。`test:smoke` 需要开发后端已经启动且 `DEV_AUTH_ENABLED=true`；它验证登录、菜单、订单幂等、商户可见性、取消和库存恢复。没有商品时会补充演示商品，测试订单会自动取消。
+`lint` 会对 API TypeScript/测试文件和小程序 TypeScript/Vue SFC 执行 ESLint，再运行 TypeScript/Vue 类型检查并校验 smoke 脚本语法。`test:smoke` 需要开发后端已经启动且 `DEV_AUTH_ENABLED=true`、`TEST_PAYMENT_ENABLED=true`；它验证登录、菜单、订单幂等、付款前接单拦截、并发测试支付、退款和库存恢复。没有商品时会补充演示商品，测试订单会自动取消。
 
 API 存活与就绪探针分别为 `/api/health/live` 和 `/api/health/ready`；后者会验证数据库连接。
 
@@ -119,4 +136,4 @@ API 依赖审计当前为 0 个已知漏洞。小程序仍有来自 uni-app 构�
 
 ## 上线前
 
-生产环境必须设置 `NODE_ENV=production`、`DEV_AUTH_ENABLED=false`、高强度随机密钥和 HTTPS API 域名，并配置真实微信 AppID/Secret。API 已实现微信 `code2session` 登录流程，但仍需使用真实配置完成联调验收；支付/退款、WebSocket 业务通知和 Redis 业务接入尚未完成。构建与 smoke 通过不等同于生产验收。
+生产环境必须设置 `NODE_ENV=production`、`DEV_AUTH_ENABLED=false`、`TEST_PAYMENT_ENABLED=false`、高强度随机密钥和 HTTPS API 域名，并配置真实微信 AppID/Secret。微信登录与本地测试支付已接通；真实微信收款/退款、WebSocket 业务通知和 Redis 业务接入尚未完成。测试支付不能用于生产收款，构建与 smoke 通过不等同于生产验收。

@@ -2,21 +2,11 @@ import { STORAGE_PREFIX } from "../config/runtime";
 import type { CartItem, Product } from "../types";
 
 const CART_PREFIX = `${STORAGE_PREFIX}cart:`;
-const CHECKOUT_PREFIX = `${STORAGE_PREFIX}checkout:`;
 const REMARK_PREFIX = `${STORAGE_PREFIX}checkout-remark:`;
 const MAX_QUANTITY = 99;
 
-interface CheckoutAttempt {
-  fingerprint: string;
-  key: string;
-}
-
 function cartKey(shopId: string) {
   return `${CART_PREFIX}${shopId}`;
-}
-
-function checkoutKey(shopId: string) {
-  return `${CHECKOUT_PREFIX}${shopId}`;
 }
 
 function remarkKey(shopId: string) {
@@ -99,57 +89,4 @@ export function reconcileCartWithRemoved(items: CartItem[], products: Product[])
 
 export function reconcileCart(items: CartItem[], products: Product[]) {
   return reconcileCartWithRemoved(items, products).items;
-}
-
-function fingerprint(shopId: string, items: CartItem[], remark: string) {
-  const itemFingerprint = [...items]
-    .sort((left, right) => left.productId.localeCompare(right.productId))
-    .map((item) => `${item.productId}:${item.quantity}:${item.price}`)
-    .join("|");
-  return JSON.stringify([shopId, itemFingerprint, remark]);
-}
-
-export function getCheckoutAttempt(
-  shopId: string,
-  items: CartItem[],
-  remark: string,
-) {
-  const currentFingerprint = fingerprint(shopId, items, remark);
-  const saved = uni.getStorageSync(checkoutKey(shopId)) as
-    | Partial<CheckoutAttempt>
-    | undefined;
-  if (
-    saved &&
-    saved.fingerprint === currentFingerprint &&
-    typeof saved.key === "string" &&
-    saved.key
-  ) {
-    return saved.key;
-  }
-  const attempt: CheckoutAttempt = {
-    fingerprint: currentFingerprint,
-    key: `mini-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`,
-  };
-  uni.setStorageSync(checkoutKey(shopId), attempt);
-  return attempt.key;
-}
-
-export function findCheckoutAttempt(
-  shopId: string,
-  items: CartItem[],
-  remark: string,
-) {
-  const saved = uni.getStorageSync(checkoutKey(shopId)) as
-    | Partial<CheckoutAttempt>
-    | undefined;
-  return saved &&
-    saved.fingerprint === fingerprint(shopId, items, remark) &&
-    typeof saved.key === "string" &&
-    saved.key
-    ? saved.key
-    : null;
-}
-
-export function clearCheckoutAttempt(shopId: string) {
-  if (shopId) uni.removeStorageSync(checkoutKey(shopId));
 }

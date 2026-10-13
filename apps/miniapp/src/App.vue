@@ -2,7 +2,9 @@
 import { onLaunch } from "@dcloudio/uni-app";
 import { api } from "./services/api";
 
-onLaunch(() => api.restore());
+onLaunch(() => {
+  if (api.restore()) void api.refreshUser().catch(() => undefined);
+});
 </script>
 
 <style>

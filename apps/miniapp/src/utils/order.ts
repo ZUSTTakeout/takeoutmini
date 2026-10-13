@@ -10,6 +10,14 @@ export const STATUS_TEXT: Record<OrderStatus, string> = {
 
 export const ACTIVE_STATUSES: OrderStatus[] = ["CREATED", "ACCEPTED", "READY"];
 
+export function isPendingPayment(order: Order) {
+  return order.status === "CREATED" && order.paymentStatus === "PENDING";
+}
+
+export function orderStatusText(order: Order) {
+  return isPendingPayment(order) ? "待付款" : STATUS_TEXT[order.status];
+}
+
 export const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   CREATED: "ACCEPTED",
   ACCEPTED: "READY",

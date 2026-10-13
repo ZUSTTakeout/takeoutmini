@@ -6,6 +6,8 @@ export type OrderStatus =
   | "READY"
   | "COMPLETED"
   | "CANCELLED";
+export type PaymentStatus = "NOT_REQUIRED" | "PENDING" | "PAID" | "CLOSED" | "REFUNDED";
+export type PaymentMethod = "TEST";
 
 export interface User {
   id: string;
@@ -55,6 +57,11 @@ export interface Order {
   total: number;
   createdAt: string;
   updatedAt?: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod | null;
+  paymentReference?: string | null;
+  paidAt?: string | null;
+  refundedAt?: string | null;
   remark?: string | null;
   shop: { id: string; name: string };
   items: OrderItem[];

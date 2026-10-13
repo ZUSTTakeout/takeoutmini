@@ -8,15 +8,13 @@ import IconButton from "../../components/IconButton.vue";
 import CheckoutBar from "../../components/CheckoutBar.vue";
 import { useScrollRefresh } from "../../composables/useRefresh";
 import { formatMoney } from "../../utils/format";
+import { crypto } from "../../utils/crypto";
 import { computed, ref } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import StateView from "../../components/StateView.vue";
-import { ApiError, api, getErrorMessage } from "../../services/api";
+import { ApiError, NetworkError, api, getErrorMessage } from "../../services/api";
 import {
-  clearCheckoutAttempt,
   clearCheckoutRemark,
-  findCheckoutAttempt,
-  getCheckoutAttempt,
   loadCheckoutRemark,
   loadCart,
   reconcileCart,
@@ -34,6 +32,7 @@ const remark = ref("");
 const loading = ref(true);
 const submitting = ref(false);
 const error = ref("");
+const cartChanges = ref<string[]>([]);
 const confirming = ref(false);
 const contentTop = ref(0);
 const itemCount = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0));
@@ -69,10 +68,30 @@ const total = computed(() =>
   items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
 );
 
-function orderSignature(cartItems: CartItem[]) {
-  return JSON.stringify(
-    cartItems.map((item) => [item.productId, item.quantity, item.price]),
-  );
+function updateCart(latestShop: Shop, previousItems: CartItem[] = items.value) {
+  const latestItems = reconcileCart(previousItems, latestShop.products);
+  const itemsById = new Map(latestItems.map((item) => [item.productId, item]));
+  const changes = previousItems.flatMap((item) => {
+    const latest = itemsById.get(item.productId);
+    if (!latest) return [`已移除「${item.name}」（已售罄或下架）`];
+    const messages: string[] = [];
+    if (latest.quantity !== item.quantity) {
+      messages.push(`「${item.name}」数量从 ${item.quantity} 份调整为 ${latest.quantity} 份`);
+    }
+    if (latest.price !== item.price) {
+      messages.push(`「${item.name}」价格从 ${formatMoney(item.price)} 调整为 ${formatMoney(latest.price)}`);
+    }
+    return messages;
+  });
+  shop.value = latestShop;
+  items.value = latestItems;
+  saveCart(shopId.value, latestItems);
+  cartChanges.value = changes;
+  if (changes.length) {
+    contentTop.value = contentTop.value === 0 ? 1 : 0;
+    uni.showToast({ title: changes[0], icon: "none", duration: 4000 });
+  }
+  return changes.length > 0;
 }
 
 function goMenu() {
@@ -92,9 +111,7 @@ async function load(silent = false) {
   try {
     const result = await api.shop(shopId.value);
     if (!result) throw new Error("店铺不存在或已下线");
-    shop.value = result;
-    items.value = reconcileCart(loadCart(shopId.value), result.products);
-    saveCart(shopId.value, items.value);
+    updateCart(result, loadCart(shopId.value));
   } catch (reason: unknown) {
     const message = getErrorMessage(reason, "购物车加载失败，请稍后重试");
     if (silent) uni.showToast({ title: message, icon: "none" });
@@ -137,43 +154,25 @@ function requestStudentLogin() {
 
 async function submit() {
   if (submitting.value) return;
-  if (!items.value.length) {
-    uni.showToast({ title: "购物车是空的", icon: "none" });
-    return;
-  }
   if (!api.isRole("STUDENT")) {
     requestStudentLogin();
     return;
   }
+  if (!items.value.length) {
+    uni.showToast({ title: "购物车是空的", icon: "none" });
+    return;
+  }
 
   submitting.value = true;
+  let orderRequested = false;
   try {
-    let idempotencyKey = findCheckoutAttempt(
-      shopId.value,
-      items.value,
-      remark.value,
-    );
-    if (!idempotencyKey) {
-      const latestShop = await api.shop(shopId.value);
-      if (!latestShop?.isOpen) throw new Error("店铺当前未营业");
+    const latestShop = await api.shop(shopId.value);
+    if (!latestShop) throw new Error("店铺不存在或已下线");
+    if (updateCart(latestShop)) return;
+    if (!latestShop.isOpen) throw new Error("店铺当前未营业");
 
-      const previousSignature = orderSignature(items.value);
-      const latestItems = reconcileCart(items.value, latestShop.products);
-      items.value = latestItems;
-      shop.value = latestShop;
-      saveCart(shopId.value, latestItems);
-      if (!latestItems.length) throw new Error("所选菜品已售罄或下架");
-      if (previousSignature !== orderSignature(latestItems)) {
-        uni.showToast({ title: "菜品信息已更新，请确认后重试", icon: "none" });
-        return;
-      }
-      idempotencyKey = getCheckoutAttempt(
-        shopId.value,
-        items.value,
-        remark.value,
-      );
-    }
-    const order = await api.createOrder({
+    const idempotencyKey = await crypto.randomUUID();
+    const input = {
       shopId: shopId.value,
       items: items.value.map((item) => ({
         productId: item.productId,
@@ -182,26 +181,29 @@ async function submit() {
       })),
       remark: remark.value,
       idempotencyKey,
+    };
+    orderRequested = true;
+    const order = await api.createOrder(input).catch((reason: unknown) => {
+      if (!(reason instanceof NetworkError)) throw reason;
+      return api.createOrder(input);
     });
+
     saveCart(shopId.value, []);
-    clearCheckoutAttempt(shopId.value);
     clearCheckoutRemark(shopId.value);
     items.value = [];
     remark.value = "";
+    cartChanges.value = [];
     setStage(false);
-    uni.showModal({
-      title: "下单成功",
-      content: `订单 ${order.number} 已提交，可在订单页查看进度。`,
-      confirmText: "查看订单",
-      cancelText: "留在当前页",
-      success: ({ confirm }) => {
-        if (confirm) uni.switchTab({ url: "/pages/orders/index" });
-      },
+    uni.navigateTo({
+      url: `/pages/orders/detail?id=${encodeURIComponent(order.id)}${order.paymentStatus === 'PENDING' ? '&pay=1' : ''}`,
+      fail: () => uni.switchTab({ url: "/pages/orders/index" }),
     });
   } catch (reason: unknown) {
     if (!(reason instanceof ApiError && reason.statusCode === 401)) {
       uni.showToast({
-        title: getErrorMessage(reason, "下单失败，请稍后重试"),
+        title: orderRequested && reason instanceof NetworkError
+          ? "未收到下单结果，请先查看订单"
+          : getErrorMessage(reason, "下单失败，请稍后重试"),
         icon: "none",
       });
     }
@@ -229,6 +231,10 @@ onLoad((query) => {
     </template>
     <scroll-view class="cart-scroll" scroll-y :scroll-top="contentTop" :refresher-enabled="!submitting" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
       <view class="cart-body">
+        <view v-if="cartChanges.length" class="cart-updates">
+          <ReIcon name="alert" :size="16" />
+          <view class="update-messages"><text v-for="message in cartChanges" :key="message">{{ message }}</text><text>请确认商品后重新提交</text></view>
+        </view>
         <StateView :loading="loading" :error="error" skeleton="card" action-text="重试" @action="load()" />
         <template v-if="!loading && !error">
           <StateView :empty="items.length === 0" empty-text="购物车还是空的，先选点想吃的吧" action-text="去点餐" @action="goMenu" />
@@ -263,6 +269,8 @@ onLoad((query) => {
 .pickup-line text { min-width: 0; flex: 1; }
 .cart-scroll { height: 0; flex: 1; min-height: 0; }
 .cart-body { --content-clearance: var(--space-3); padding: var(--space-3) var(--space-4) calc(var(--content-clearance) + env(safe-area-inset-bottom)); }
+.cart-updates { display: flex; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-3) 0; border-bottom: 2rpx solid var(--color-border); color: var(--color-warning); font-size: var(--font-caption); line-height: 1.6; }
+.update-messages { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: var(--space-1); overflow-wrap: anywhere; }
 .content-heading, .remark-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: var(--space-3); }
 .item-list { padding: 0 var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
 .order-total { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; font-size: var(--font-body); }

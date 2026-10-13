@@ -27,24 +27,24 @@ function chooseCategory(event: unknown) {
 </script>
 
 <template>
-  <van-popup :show="show" position="bottom" round :duration="160" :close-on-click-overlay="!saving" :safe-area-inset-bottom="false" custom-style="height:88vh;background:var(--color-surface);" @close="!saving && $emit('close')">
+  <van-popup :show="show" position="bottom" round :duration="160" :close-on-click-overlay="!saving" :safe-area-inset-bottom="false" custom-style="height:88vh;" @close="!saving && $emit('close')">
     <view class="editor">
       <view class="sheet-handle" />
       <view class="editor-heading"><IconButton name="close" label="关闭商品编辑" :disabled="saving" @click="$emit('close')" /><text class="editor-title">{{ product ? '编辑商品' : '新增商品' }}</text><IconButton name="save" label="保存商品" variant="primary" :loading="saving" @click="emit('save', { ...draft })" /></view>
       <scroll-view scroll-y class="editor-scroll" :show-scrollbar="false">
         <view class="editor-body">
           <view class="image-preview"><FoodImage :src="draft.image" :size="96" /><view class="image-heading"><text class="image-name">{{ draft.name || '商品图片' }}</text><text class="image-caption">{{ product ? '商品信息' : '新商品' }}</text></view></view>
-          <view class="editor-field"><text class="form-label">商品名称</text><input class="form-input" :value="draft.name" placeholder="填写商品名称" aria-label="商品名称" :maxlength="60" :disabled="saving" @input="draft.name = nativeValue($event)" /></view>
+          <view class="editor-field"><text class="form-label">商品名称</text><input class="form-input" :value="draft.name" placeholder-class="form-placeholder" placeholder="填写商品名称" aria-label="商品名称" :maxlength="60" :disabled="saving" @input="draft.name = nativeValue($event)" /></view>
           <view class="field-columns">
-            <view class="editor-field"><text class="form-label">价格（元）</text><input class="form-input" :value="draft.priceYuan" type="digit" placeholder="0.00" aria-label="商品价格" :maxlength="10" :disabled="saving" @input="draft.priceYuan = nativeValue($event)" /></view>
-            <view class="editor-field"><text class="form-label">库存数量</text><input class="form-input" :value="draft.stock" type="number" placeholder="0" aria-label="库存数量" :maxlength="7" :disabled="saving" @input="draft.stock = nativeValue($event)" /></view>
+            <view class="editor-field"><text class="form-label">价格（元）</text><input class="form-input" :value="draft.priceYuan" type="digit" placeholder-class="form-placeholder" placeholder="0.00" aria-label="商品价格" :maxlength="10" :disabled="saving" @input="draft.priceYuan = nativeValue($event)" /></view>
+            <view class="editor-field"><text class="form-label">库存数量</text><input class="form-input" :value="draft.stock" type="number" placeholder-class="form-placeholder" placeholder="0" aria-label="库存数量" :maxlength="7" :disabled="saving" @input="draft.stock = nativeValue($event)" /></view>
           </view>
           <view class="editor-field">
             <view class="category-heading"><text class="form-label">商品分类</text><IconButton name="add" label="新增商品分类" compact :disabled="saving" @click="$emit('addCategory')" /></view>
             <picker mode="selector" :range="categories" range-key="name" :value="categoryIndex" :disabled="saving || !categories.length" @change="chooseCategory"><view class="category-picker"><text>{{ categoryName }}</text><ReIcon name="chevron-right" color="secondary" :size="17" /></view></picker>
           </view>
-          <view class="editor-field"><text class="form-label">商品描述</text><textarea class="form-input form-textarea description-input" :value="draft.description" placeholder="填写商品描述" aria-label="商品描述" :maxlength="500" :disabled="saving" @input="draft.description = nativeValue($event)" /><view class="character-count">{{ draft.description.length }}/500</view></view>
-          <view class="editor-field"><text class="form-label">图片地址</text><input class="form-input" :value="draft.image" placeholder="选填" aria-label="商品图片地址" :maxlength="2048" :disabled="saving" @input="draft.image = nativeValue($event)" /></view>
+          <view class="editor-field"><text class="form-label">商品描述</text><textarea class="form-input form-textarea description-input" :value="draft.description" placeholder-class="form-placeholder" placeholder="填写商品描述" aria-label="商品描述" :maxlength="500" :disabled="saving" @input="draft.description = nativeValue($event)" /><view class="character-count">{{ draft.description.length }}/500</view></view>
+          <view class="editor-field"><text class="form-label">图片地址</text><input class="form-input" :value="draft.image" placeholder-class="form-placeholder" placeholder="选填" aria-label="商品图片地址" :maxlength="2048" :disabled="saving" @input="draft.image = nativeValue($event)" /></view>
           <view class="availability"><view><text class="availability-title">上架状态</text><text class="availability-value">{{ draft.isAvailable ? '在售' : '下架' }}</text></view><van-switch :checked="draft.isAvailable" :disabled="saving" size="52rpx" active-color="var(--color-brand)" inactive-color="var(--color-border)" @change="draft.isAvailable = Boolean(nativeDetail($event))" /></view>
         </view>
       </scroll-view>

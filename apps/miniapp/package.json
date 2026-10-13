@@ -13,7 +13,10 @@
     "typecheck": "vue-tsc --noEmit",
     "prebuild:mock": "npm run ui:prepare",
     "build:mock": "node scripts/build-mock.mjs",
-    "test:mock": "node --test scripts/check-mock.mjs"
+    "test:mock": "node --test scripts/check-mock.mjs",
+    "test:checkout": "node --test scripts/check-checkout.mjs",
+    "test:payment-auth": "node --test scripts/check-payment-auth.mjs",
+    "check:production": "node scripts/check-mock.mjs --production"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5020620260917001",

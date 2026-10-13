@@ -4,10 +4,11 @@ import {
   ForbiddenException,
   Post,
   Body,
-  UnauthorizedException,
+  Get,
+  UseGuards,
 } from "@nestjs/common";
 import { Prisma, Role } from "@prisma/client";
-import { AuthService, AuthenticatedUser } from "./auth";
+import { AuthGuard, AuthService, AuthenticatedUser, CurrentUser } from "./auth";
 import { DevLoginDto, WechatLoginDto } from "./auth.dto";
 import { PrismaService } from "../database/prisma.service";
 
@@ -127,59 +128,16 @@ export class AuthController {
 
   @Post("wechat")
   async wechatLogin(@Body() body: WechatLoginDto) {
-    const session = await this.auth.exchangeWechatCode(body.code);
-    let [byOpenId, byUnionId] = await Promise.all([
-      this.prisma.user.findUnique({
-        where: { wechatOpenId: session.openId },
-        select: publicUserSelect,
-      }),
-      session.unionId
-        ? this.prisma.user.findUnique({
-            where: { wechatUnionId: session.unionId },
-            select: publicUserSelect,
-          })
-        : null,
-    ]);
-
-    if (byOpenId && byUnionId && byOpenId.id !== byUnionId.id) {
-      throw new UnauthorizedException("微信身份信息冲突");
-    }
-
-    let user = byOpenId ?? byUnionId;
-    if (!user) {
-      try {
-        user = await this.prisma.user.create({
-          data: {
-            nickname: "微信用户",
-            role: Role.STUDENT,
-            wechatOpenId: session.openId,
-            wechatUnionId: session.unionId,
-          },
-          select: publicUserSelect,
-        });
-      } catch (error) {
-        if (!isUniqueConflict(error)) throw error;
-        [byOpenId, byUnionId] = await Promise.all([
-          this.prisma.user.findUnique({
-            where: { wechatOpenId: session.openId },
-            select: publicUserSelect,
-          }),
-          session.unionId
-            ? this.prisma.user.findUnique({
-                where: { wechatUnionId: session.unionId },
-                select: publicUserSelect,
-              })
-            : null,
-        ]);
-        user = byOpenId ?? byUnionId;
-        if (!user) throw new ConflictException("微信账号创建冲突，请重试");
-      }
-    }
-
-    if (user.role !== Role.STUDENT) {
-      throw new ForbiddenException("该微信账号不能用于学生登录");
-    }
+    const user = await this.auth.loginWechat(body.code);
     return this.authResponse(user);
+  }
+
+  @Get("me")
+  @UseGuards(AuthGuard)
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      id: user.id, nickname: user.nickname, role: user.role, shopId: user.shopId,
+    };
   }
 
   private async getOrCreateDevStudent(): Promise<AuthenticatedUser> {

@@ -10,4 +10,5 @@ interface ImportMetaEnv {
   readonly VITE_MOCK_ENABLED?: string;
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_DEV_AUTH_ENABLED?: string;
+  readonly VITE_WECHAT_APP_ID?: string;
 }

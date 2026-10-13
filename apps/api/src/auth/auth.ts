@@ -1,6 +1,7 @@
 import {
   BadGatewayException,
   CanActivate,
+  ConflictException,
   createParamDecorator,
   ExecutionContext,
   Injectable,
@@ -9,7 +10,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import type { Request } from "express";
 import * as jwt from "jsonwebtoken";
 import { PrismaService } from "../database/prisma.service";
@@ -34,6 +35,13 @@ type WechatSession = {
   unionid?: unknown;
   errcode?: unknown;
 };
+
+const publicUserSelect = {
+  id: true, nickname: true, role: true, shopId: true,
+} as const;
+const wechatUserSelect = {
+  ...publicUserSelect, wechatOpenId: true, wechatUnionId: true,
+} as const;
 
 export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
 
@@ -105,10 +113,10 @@ export class AuthService {
     openId: string;
     unionId: string | null;
   }> {
-    const appId = process.env.WECHAT_APP_ID;
-    const appSecret = process.env.WECHAT_APP_SECRET;
+    const appId = process.env.WECHAT_APP_ID?.trim();
+    const appSecret = process.env.WECHAT_APP_SECRET?.trim();
     if (!appId || !appSecret) {
-      throw new ServiceUnavailableException("微信登录尚未配置");
+      throw new ServiceUnavailableException("微信登录暂不可用，请稍后再试");
     }
 
     const query = new URLSearchParams({
@@ -138,20 +146,80 @@ export class AuthService {
       throw new BadGatewayException("微信登录服务响应异常");
     }
 
+    if (!session || typeof session !== "object" || Array.isArray(session)) {
+      throw new BadGatewayException("微信登录服务响应异常");
+    }
+
     if (session.errcode !== undefined && session.errcode !== 0) {
       if (session.errcode === 40029 || session.errcode === 40163) {
         throw new UnauthorizedException("微信登录凭证无效或已使用");
       }
       throw new BadGatewayException("微信登录服务暂不可用");
     }
-    if (typeof session.openid !== "string" || !session.openid) {
+    if (
+      typeof session.openid !== "string" ||
+      !session.openid.trim() || session.openid.length > 128
+    ) {
       throw new BadGatewayException("微信登录服务未返回用户标识");
+    }
+    if (typeof session.unionid === "string" && session.unionid.length > 128) {
+      throw new BadGatewayException("微信登录服务响应异常");
     }
 
     return {
       openId: session.openid,
-      unionId: typeof session.unionid === "string" ? session.unionid : null,
+      unionId: typeof session.unionid === "string" && session.unionid.trim()
+        ? session.unionid : null,
     };
+  }
+
+  async loginWechat(code: string): Promise<AuthenticatedUser> {
+    const identity = await this.exchangeWechatCode(code);
+    // 首次同时登录可能竞争唯一键；重新查询时也必须检查身份冲突。
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const [byOpenId, byUnionId] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { wechatOpenId: identity.openId }, select: wechatUserSelect,
+        }),
+        identity.unionId ? this.prisma.user.findUnique({
+          where: { wechatUnionId: identity.unionId }, select: wechatUserSelect,
+        }) : null,
+      ]);
+      if (
+        (byOpenId && byUnionId && byOpenId.id !== byUnionId.id) ||
+        (byOpenId?.wechatUnionId && identity.unionId &&
+          byOpenId.wechatUnionId !== identity.unionId)
+      ) {
+        throw new UnauthorizedException("微信身份信息冲突，请联系管理员");
+      }
+
+      const existing = byOpenId ?? byUnionId;
+      try {
+        if (!existing) {
+          return await this.prisma.user.create({
+            data: {
+              nickname: "微信用户", role: Role.STUDENT,
+              wechatOpenId: identity.openId, wechatUnionId: identity.unionId,
+            },
+            select: publicUserSelect,
+          });
+        }
+        // 使用数据库中的角色，已绑定的商户同样从唯一微信入口登录。
+        return await this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            wechatOpenId: identity.openId,
+            ...(identity.unionId ? { wechatUnionId: identity.unionId } : {}),
+          },
+          select: publicUserSelect,
+        });
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) {
+          throw error;
+        }
+      }
+    }
+    throw new ConflictException("微信账号正在登录，请稍后再试");
   }
 }
 

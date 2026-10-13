@@ -30,11 +30,7 @@ const sections = computed(() => {
   const groups = shop.value.categories.map((category) => ({ ...category, products: available.filter((product) => product.categoryId === category.id) }));
   const other = available.filter((product) => !shop.value?.categories.some((category) => category.id === product.categoryId));
   if (other.length) groups.push({ id: "uncategorized", name: "其他", products: other });
-  return groups;
-});
-const signatureId = computed(() => {
-  const available = shop.value?.products.filter((product) => product.isAvailable && product.stock > 0) || [];
-  return available.reduce<Product | undefined>((chosen, product) => !chosen || product.stock < chosen.stock ? product : chosen, undefined)?.id;
+  return groups.filter((group) => group.products.length > 0);
 });
 let sectionTops: number[] = [];
 let scrollPosition = 0;
@@ -183,8 +179,7 @@ onShow(syncCart);
       <scroll-view id="product-scroll" class="menu-content" scroll-y :scroll-into-view="scrollTarget" scroll-with-animation refresher-enabled :refresher-triggered="refreshing" @refresherrefresh="onRefresh" @scroll="trackScroll">
         <view v-for="(section, index) in sections" :id="'menu-section-' + index" :key="section.id" class="category-section">
           <view class="category-heading"><text>{{ section.name }}</text><text class="section-meta">{{ section.products.length }}</text></view>
-          <StateView :empty="section.products.length === 0" empty-text="这个分类暂时没有菜品" />
-          <ProductRow v-for="product in section.products" :key="product.id" :product="product" :signature="product.id === signatureId" :quantity="quantity(product.id)" :disabled="!shop.isOpen" @change="changeQuantity(product, $event)" />
+          <ProductRow v-for="product in section.products" :key="product.id" :product="product" :quantity="quantity(product.id)" :disabled="!shop.isOpen" @change="changeQuantity(product, $event)" />
         </view>
         <StateView :empty="sections.length === 0" empty-text="店铺还没有上架菜品" />
         <view class="menu-end">已经到底了</view>
@@ -203,7 +198,7 @@ onShow(syncCart);
 .shop-notice { display: flex; align-items: flex-start; gap: var(--space-1); padding: 0 var(--space-4) var(--space-3); color: var(--color-text-secondary); font-size: var(--font-caption); }
 .shop-notice text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .closed-banner { padding: var(--space-2) var(--space-4); background: var(--color-warning-soft); color: var(--color-warning); font-size: var(--font-caption); }
-.menu-toolbar { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-4); border-top: 2rpx solid var(--color-border); border-bottom: 2rpx solid var(--color-border); color: var(--color-text); font-size: var(--font-body); font-weight: 600; }
+.menu-toolbar { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-4); border-top: 2rpx solid var(--color-border); border-bottom: 2rpx solid var(--color-border); color: var(--color-text); font-size: var(--font-body); font-weight: 600; }
 .menu-layout { display: flex; height: 100%; min-height: 0; flex: 1; }
 .category-scroll { width: 144rpx; height: 100%; flex: none; background: var(--color-input); }
 .menu-content { width: 0; height: 100%; min-width: 0; flex: 1; background: var(--color-surface); }

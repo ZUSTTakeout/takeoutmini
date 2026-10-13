@@ -134,6 +134,7 @@ try {
   );
   order = await request("/orders", "POST", body, student.token);
   assert.equal(order.total, product.price);
+  assert.equal(order.paymentStatus, "PENDING");
   const retry = await request("/orders", "POST", body, student.token);
   assert.equal(retry.id, order.id, "Retry must return same order");
   await request(
@@ -143,13 +144,26 @@ try {
     student.token,
     409,
   );
-  const merchantOrders = await request(
+  const beforePayment = await request(
     "/merchant/orders",
     "GET",
     undefined,
     merchant.token,
   );
-  assert.ok(merchantOrders.some((o) => o.id === order.id));
+  assert.ok(!beforePayment.some((o) => o.id === order.id), "Unpaid orders must not enter the merchant queue");
+  await request(`/orders/${order.id}/pay/test`, "POST", undefined, merchant.token, 403);
+  await request(`/orders/${order.id}/status`, "PATCH", { status: "ACCEPTED" }, merchant.token, 409);
+  const payments = await Promise.all(Array.from({ length: 10 }, () =>
+    request(`/orders/${order.id}/pay/test`, "POST", undefined, student.token),
+  ));
+  assert.ok(payments.every((paid) => paid.paymentStatus === "PAID" && paid.total === order.total));
+  assert.equal(new Set(payments.map((paid) => paid.paymentReference)).size, 1, "Concurrent retries must produce one payment");
+  assert.ok(payments[0].paidAt);
+  const merchantOrders = await request("/merchant/orders", "GET", undefined, merchant.token);
+  assert.ok(merchantOrders.some((o) => o.id === order.id), "Paid orders must enter the merchant queue");
+  const me = await request("/auth/me", "GET", undefined, student.token);
+  assert.equal(me.id, student.user.id);
+  assert.ok(!("wechatOpenId" in me));
   const after = await request(`/shops/${shop.id}`);
   assert.equal(
     after.products.find((p) => p.id === product.id).stock,
@@ -161,12 +175,15 @@ try {
 
 if (order) {
   try {
-    await request(
+    const cancelled = await request(
       `/orders/${order.id}/status`,
       "PATCH",
       { status: "CANCELLED" },
       student.token,
     );
+    assert.equal(cancelled.paymentStatus, "REFUNDED");
+    assert.ok(cancelled.refundedAt);
+    await request(`/orders/${order.id}/pay/test`, "POST", undefined, student.token, 409);
     await request(
       `/orders/${order.id}/status`,
       "PATCH",
@@ -214,5 +231,5 @@ if (shop && originalIsOpen === false) {
 
 if (failure) throw failure;
 console.log(
-  "PASS: auth guards, login, shop/menu, create order, idempotent replay/conflict, merchant visibility, cleanup and stock restore",
+  "PASS: auth guards, login, account refresh, shop/menu, order idempotency, unpaid acceptance guard, concurrent test payments, merchant visibility, refund and stock restore",
 );

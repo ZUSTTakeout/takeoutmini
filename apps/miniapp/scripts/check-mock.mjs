@@ -1,50 +1,44 @@
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import test from "node:test";
+import { appRoot, harness } from "./test-harness.mjs";
 
-const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const ts = createRequire(resolve(appRoot, "package.json"))("typescript");
-
-function harness(mock = true) {
-  const storage = new Map([["token", "real-token"], ["user", { id: "real-user", nickname: "真实账号", role: "STUDENT" }]]);
-  const modules = new Map();
-  let requests = 0;
-  let wechatLogins = 0;
-  const uni = {
-    getStorageSync: (key) => storage.get(key),
-    setStorageSync: (key, value) => storage.set(key, structuredClone(value)),
-    removeStorageSync: (key) => storage.delete(key),
-    showModal: () => {},
-    showToast: () => {},
-    login: () => { wechatLogins += 1; },
-    request: (options) => { requests += 1; options.success({ statusCode: 200, data: [] }); },
-  };
-  const env = { VITE_MOCK_ENABLED: String(mock), VITE_DEV_AUTH_ENABLED: "false", DEV: false };
-  function load(relative, parent = resolve(appRoot, "src")) {
-    let filename = resolve(parent, relative);
-    if (!existsSync(filename + ".ts")) filename = resolve(filename, "index");
-    filename += ".ts";
-    if (modules.has(filename)) return modules.get(filename).exports;
-    const module = { exports: {} };
-    modules.set(filename, module);
-    const source = readFileSync(filename, "utf8").replaceAll("import.meta.env", "env");
-    const compiled = ts.transpileModule(source, {
-      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
-    }).outputText;
-    const requireLocal = (name) => load(name, dirname(filename));
-    new Function("require", "module", "exports", "uni", "env", compiled)(requireLocal, module, module.exports, uni, env);
-    return module.exports;
-  }
-  const { dispatchMockRequest } = load("./mock");
-  const { MOCK_STUDENT: student, MOCK_MERCHANT: merchant } = load("./mock/fixtures");
-  return {
-    storage, load, student, merchant,
-    request: (path, method = "GET", data, user = student) => dispatchMockRequest(path, { method, data }, user),
-    counters: () => ({ requests, wechatLogins }),
-  };
+// 单元测试仍可独立运行；上线检查必须额外验证实际生成的正式包。
+if (process.argv.includes("--production")) {
+  test("正式构建不包含 Mock 模块、演示图片、商品或账号", () => {
+    const output = resolve(appRoot, "dist/build/mp-weixin");
+    assert.ok(existsSync(resolve(output, "app.json")), "请先关闭 Mock 并执行 build:mp-weixin");
+    const files = [];
+    function collect(directory) {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const path = resolve(directory, entry.name);
+        if (entry.isDirectory()) collect(path);
+        else files.push({ path, name: relative(output, path).replaceAll("\\", "/"), bytes: statSync(path).size });
+      }
+    }
+    collect(output);
+    const h = harness();
+    const shops = h.request("/shops");
+    const forbidden = new Set([
+      "mock:v1:", "mock-wechat-code", "static/mock-food/",
+      h.student.id, h.student.nickname, h.merchant.id, h.merchant.nickname,
+      ...shops.flatMap((shop) => [
+        shop.id, shop.name,
+        ...shop.products.flatMap((product) => [product.id, product.name]),
+      ]),
+    ]);
+    for (const file of files) {
+      assert.ok(!/(^|\/)mock(?:-food)?\//i.test(file.name), `正式包包含演示目录：${file.name}`);
+      const content = readFileSync(file.path, "utf8");
+      for (const marker of forbidden) {
+        assert.ok(!content.includes(marker), `正式包残留演示数据：${file.name}（${marker}）`);
+      }
+    }
+    const bytes = files.reduce((total, file) => total + file.bytes, 0);
+    const vant = files.filter((file) => file.name.startsWith("wxcomponents/vant/"));
+    console.log(`正式包：${files.length} 个文件，${bytes} 字节；Vant：${vant.length} 个文件，${vant.reduce((total, file) => total + file.bytes, 0)} 字节。`);
+  });
 }
 
 test("完整场景、订单权限、响应副本与本地图片", () => {
@@ -162,4 +156,26 @@ test("mock 模式不发送请求或微信登录，正式模式仍请求 API", as
   assert.equal(liveApi.user.id, "real-user");
   await liveApi.shops();
   assert.equal(live.counters().requests, 1);
+});
+
+test("短订单号完整保留、流水递增与旧格式取餐兼容", async () => {
+  const h = harness();
+  const { getPickupCode } = h.load("./utils/order-number");
+  const input = {
+    shopId: "mock-hejian",
+    items: [{ productId: "mock-rice-1", quantity: 1, expectedPrice: 1850 }],
+    idempotencyKey: "short-number",
+  };
+  const first = h.request("/orders", "POST", input);
+  const second = h.request("/orders", "POST", { ...input, idempotencyKey: "next-number" });
+  assert.match(first.number, /^\d{6}-MOCK-\d{4}$/);
+  assert.equal(Number(getPickupCode(second.number)), Number(getPickupCode(first.number)) + 1);
+  assert.equal(getPickupCode("261013-A3F9-0038"), "0038");
+  const legacy = "CF" + "A".repeat(32);
+  assert.equal(getPickupCode(legacy), "");
+  assert.ok(h.request("/orders").some((order) => order.number === legacy));
+  const api = h.load("./services/api").api;
+  api.restore();
+  assert.equal((await api.order(first.id)).number, first.number);
+  assert.equal((await api.order(second.id)).number, second.number);
 });

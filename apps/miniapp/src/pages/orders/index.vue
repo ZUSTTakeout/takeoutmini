@@ -7,7 +7,7 @@ import OrderSummary from "../../components/OrderSummary.vue";
 import StateView from "../../components/StateView.vue";
 import { usePagePolling } from "../../composables/usePagePolling";
 import { ApiError, api, getErrorMessage } from "../../services/api";
-import { ACTIVE_STATUSES } from "../../utils/order";
+import { ACTIVE_STATUSES, isPendingPayment } from "../../utils/order";
 import type { Order } from "../../types";
 
 const orders = ref<Order[]>([]);
@@ -19,11 +19,13 @@ const activeTab = ref("all");
 let fetchingOrders = false;
 const orderTabs = [
   { name: "all", title: "全部" },
+  { name: "pending", title: "待付款" },
   { name: "active", title: "进行中" },
   { name: "completed", title: "已完成" },
   { name: "cancelled", title: "已取消" },
 ];
 const visibleOrders = computed(() => orders.value.filter((order) => {
+  if (activeTab.value === "pending") return isPendingPayment(order);
   if (activeTab.value === "active") return ACTIVE_STATUSES.includes(order.status);
   if (activeTab.value === "completed") return order.status === "COMPLETED";
   if (activeTab.value === "cancelled") return order.status === "CANCELLED";
@@ -83,7 +85,7 @@ async function load(silent = false, interactive = false) {
 function requestCancel(order: Order) {
   uni.showModal({
     title: "取消订单",
-    content: "确定取消这笔订单吗？",
+    content: order.paymentStatus === "PAID" ? "取消后将撤销这笔测试支付，确定取消吗？" : "确定取消这笔订单吗？",
     confirmText: "确认取消",
 
     success: ({ confirm }) => {

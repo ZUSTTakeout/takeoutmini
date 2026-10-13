@@ -13,7 +13,7 @@ defineEmits<{ "update:modelValue": [value: string] }>();
 </template>
 
 <style scoped>
-.category-rail { position: sticky; top: 0; align-self: flex-start; width: 144rpx; box-sizing: border-box; flex: none; padding: 16rpx 0; background: var(--color-input); }
+.category-rail { width: 144rpx; box-sizing: border-box; flex: none; padding: 16rpx 0; background: var(--color-input); }
 .rail-item { display: flex; min-height: 108rpx; box-sizing: border-box; align-items: center; padding: 24rpx 18rpx; border-left: 4rpx solid transparent; color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 1.5; overflow-wrap: anywhere; transition: background var(--motion-fast), color var(--motion-fast), border-color var(--motion-fast); }
 .rail-item.selected { border-left-color: var(--color-brand); background: var(--color-surface); color: var(--color-brand); font-weight: 700; }
 .rail-pressed { background: var(--color-brand-soft); }

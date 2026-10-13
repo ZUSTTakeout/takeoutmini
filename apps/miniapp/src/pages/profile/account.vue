@@ -8,7 +8,7 @@ import { api } from "../../services/api";
 import type { User } from "../../types";
 const user = ref<User | null>(api.user);
 const roles = { STUDENT: "学生", MERCHANT: "商户", ADMIN: "运营" };
-const showMoreLogin = import.meta.env.DEV || import.meta.env.VITE_MOCK_ENABLED === "true";
+const showMoreLogin = api.devAuthEnabled;
 function openLogin() { uni.navigateTo({ url: "/pages/profile/login" }); }
 function logout() {
   uni.showModal({

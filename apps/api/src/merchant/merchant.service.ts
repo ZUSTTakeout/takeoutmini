@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 import { AuthenticatedUser } from "../auth/auth";
 import {
   CreateCategoryDto,
@@ -51,7 +51,10 @@ export class MerchantService {
   async listOrders(user: AuthenticatedUser) {
     const shopId = await this.ownedShopId(user);
     return this.prisma.order.findMany({
-      where: { shopId },
+      where: {
+        shopId,
+        paymentStatus: { not: PaymentStatus.PENDING },
+      },
       select: orderResponseSelect,
       orderBy: { createdAt: "desc" },
       take: 500,

@@ -1,7 +1,14 @@
-.compact-empty.van-empty { padding: 52rpx 0; }
-.compact-empty .van-empty__image { height: 120rpx; width: 120rpx; }
-.compact-empty .van-empty__description { max-width: 560rpx; padding: 0 32rpx; color: var(--color-text-secondary); font-size: var(--font-body); line-height: 44rpx; }
-.van-popup--bottom { border-radius: 48rpx 48rpx 0 0; }
+/* Vant 1.11.7 的开关圆角与单元格分隔线没有原生主题变量。 */
+.van-switch { border-radius: var(--switch-border-radius) !important; }
+.van-switch__node { border-radius: var(--switch-node-border-radius) !important; }
+.van-cell::after { border-color: var(--cell-border-color) !important; }
+.van-hairline::after,
+.van-hairline--top::after,
+.van-hairline--bottom::after,
+.van-hairline--left::after,
+.van-hairline--right::after,
+.van-hairline--surround::after,
+.van-hairline--top-bottom::after { border-color: var(--color-border) !important; }
 @media (prefers-reduced-motion: reduce) {
   .van-popup, .van-overlay { transition: none !important; animation: none !important; }
 }

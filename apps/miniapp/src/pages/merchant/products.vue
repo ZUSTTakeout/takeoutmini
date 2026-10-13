@@ -135,10 +135,10 @@ usePullRefresh(async () => {
   </view>
   <MerchantNav active="products" />
   <MerchantProductEditor :show="formOpen" :product="editingProduct" :categories="categories" :saving="saving" @close="formOpen = false" @save="saveProduct" @add-category="openCategory" />
-  <van-popup :show="categoryOpen" position="bottom" round :duration="220" :z-index="120" :safe-area-inset-bottom="false" :close-on-click-overlay="!categorySaving" custom-style="background:var(--color-surface);" @close="!categorySaving && (categoryOpen = false)">
+  <van-popup :show="categoryOpen" position="bottom" round :duration="220" :z-index="120" :safe-area-inset-bottom="false" :close-on-click-overlay="!categorySaving" @close="!categorySaving && (categoryOpen = false)">
     <view class="category-sheet">
       <view class="category-heading"><IconButton name="close" label="关闭分类编辑" :disabled="categorySaving" @click="categoryOpen = false" /><text class="category-title">新增分类</text><IconButton name="save" label="保存分类" variant="primary" :loading="categorySaving" :disabled="!categoryName.trim()" @click="saveCategory" /></view>
-      <text class="form-label">分类名称</text><input class="form-input category-input" :value="categoryName" placeholder="填写分类名称" aria-label="分类名称" :maxlength="30" :disabled="categorySaving" @input="categoryName = nativeValue($event)" />
+      <text class="form-label">分类名称</text><input class="form-input category-input" :value="categoryName" placeholder-class="form-placeholder" placeholder="填写分类名称" aria-label="分类名称" :maxlength="30" :disabled="categorySaving" @input="categoryName = nativeValue($event)" />
     </view>
   </van-popup>
 </template>

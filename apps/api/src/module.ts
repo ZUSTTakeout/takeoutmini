@@ -8,6 +8,8 @@ import { OrdersController } from "./orders/orders.controller";
 import { OrdersService } from "./orders/orders.service";
 import { PrismaService } from "./database/prisma.service";
 import { ShopsController } from "./shops/shops.controller";
+import { PaymentsController } from "./payments/payments.controller";
+import { PaymentsService } from "./payments/payments.service";
 
 @Module({
   controllers: [
@@ -15,6 +17,7 @@ import { ShopsController } from "./shops/shops.controller";
     HealthController,
     MerchantController,
     OrdersController,
+    PaymentsController,
     ShopsController,
   ],
   providers: [
@@ -22,6 +25,7 @@ import { ShopsController } from "./shops/shops.controller";
     AuthService,
     MerchantService,
     OrdersService,
+    PaymentsService,
     PrismaService,
     RolesGuard,
   ],

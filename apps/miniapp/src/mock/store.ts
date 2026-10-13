@@ -34,5 +34,11 @@ export function getState(): MockState {
 }
 export function publicOrder(order: MockOrder) {
   const { id, number, status, total, createdAt, updatedAt, remark, shop, items } = order;
-  return clone({ id, number, status, total, createdAt, updatedAt, remark, shop, items });
+  return clone({
+    id, number, status, total, createdAt, updatedAt, remark, shop, items,
+    paymentStatus: order.paymentStatus ?? "NOT_REQUIRED",
+    paymentMethod: order.paymentMethod ?? null,
+    paymentReference: order.paymentReference ?? null,
+    paidAt: order.paidAt ?? null, refundedAt: order.refundedAt ?? null,
+  });
 }

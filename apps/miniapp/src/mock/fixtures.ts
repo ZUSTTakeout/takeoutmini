@@ -1,3 +1,4 @@
+import { formatOrderNumber } from "./order-number";
 import type { Order, OrderStatus, Product, Shop, User } from "../types";
 
 export const MOCK_STUDENT: User = { id: "mock-student", nickname: "林小满", role: "STUDENT" };
@@ -7,7 +8,6 @@ export const MOCK_MERCHANT: User = {
 export interface MockOrder extends Order {
   studentId: string;
   idempotencyKey?: string;
-  fingerprint?: string;
 }
 
 const images = {
@@ -124,9 +124,9 @@ export function createOrders(shops: Shop[], now = Date.now()): MockOrder[] {
     });
     const created = new Date(now - (index < 4 ? (index + 1) * 7 : index * 160) * 60_000);
     const createdAt = created.toISOString();
-    const date = `${created.getFullYear()}${String(created.getMonth() + 1).padStart(2, "0")}${String(created.getDate()).padStart(2, "0")}`;
     return {
-      id, number: `${date}${String(48 - index).padStart(4, "0")}`, status,
+      id, number: index === 11 ? "CF" + "A".repeat(32) : formatOrderNumber(shop.id, 48 - index, created), status,
+      paymentStatus: "NOT_REQUIRED",
       studentId: index === 3 || index === 10 ? "mock-classmate" : MOCK_STUDENT.id,
       shop: { id: shop.id, name: shop.name }, items, remark,
       total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),

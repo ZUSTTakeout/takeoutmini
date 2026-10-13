@@ -1,5 +1,5 @@
-import { cp, mkdir, readFile, readdir } from "node:fs/promises";
-import { resolve, extname } from "node:path";
+import { cp, mkdir, readFile, readdir, rm } from "node:fs/promises";
+import { dirname, resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const appDirectory = fileURLToPath(new URL("../", import.meta.url));
@@ -28,6 +28,13 @@ async function collectDependencies(component) {
 for (const component of components) await collectDependencies(component);
 
 await mkdir(targetDirectory, { recursive: true });
+// 此目录由脚本生成；移除旧依赖，避免按需清单缩减后仍复制进构建产物。
+for (const entry of await readdir(targetDirectory, { withFileTypes: true })) {
+  if (!entry.isDirectory() || directories.has(entry.name)) continue;
+  const obsoleteDirectory = resolve(targetDirectory, entry.name);
+  if (dirname(obsoleteDirectory) !== targetDirectory) throw new Error("Vant 清理路径超出生成目录");
+  await rm(obsoleteDirectory, { recursive: true, force: true });
+}
 const extensions = new Set([".js", ".json", ".wxml", ".wxss", ".wxs"]);
 for (const directory of directories) {
   await cp(resolve(sourceDirectory, directory), resolve(targetDirectory, directory), {

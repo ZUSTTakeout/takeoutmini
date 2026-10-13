@@ -60,9 +60,9 @@ usePullRefresh(async () => {
         <view class="setting-main"><text class="setting-label">营业状态</text><text class="setting-value">{{ draft.isOpen ? '营业中' : '休息中' }}</text></view>
         <van-switch :checked="draft.isOpen" active-color="var(--color-brand)" inactive-color="var(--color-border)" size="52rpx" :disabled="saving" @change="draft.isOpen = Boolean(nativeDetail($event))" />
       </view>
-      <view class="form-section motion-enter"><text class="form-label">店铺名称</text><input class="form-input name-input" :value="draft.name" placeholder="填写店铺名称" aria-label="店铺名称" :maxlength="60" :disabled="saving" @input="draft.name = nativeValue($event)" /></view>
+      <view class="form-section motion-enter"><text class="form-label">店铺名称</text><input class="form-input name-input" :value="draft.name" placeholder-class="form-placeholder" placeholder="填写店铺名称" aria-label="店铺名称" :maxlength="60" :disabled="saving" @input="draft.name = nativeValue($event)" /></view>
       <view class="pickup-method motion-enter"><ReIcon name="bag" color="success" :size="23" /><text>到店自取</text><ReIcon name="check" color="success" :size="18" /></view>
-      <view class="form-section motion-enter"><view class="notice-heading"><text class="form-label">店铺公告</text><ReIcon name="chat" color="secondary" :size="19" /></view><textarea class="form-input form-textarea notice-input" :value="draft.notice" placeholder="填写店铺公告" aria-label="店铺公告" :maxlength="200" :disabled="saving" @input="draft.notice = nativeValue($event)" /><view class="character-count">{{ draft.notice.length }}/200</view></view>
+      <view class="form-section motion-enter"><view class="notice-heading"><text class="form-label">店铺公告</text><ReIcon name="chat" color="secondary" :size="19" /></view><textarea class="form-input form-textarea notice-input" :value="draft.notice" placeholder-class="form-placeholder" placeholder="填写店铺公告" aria-label="店铺公告" :maxlength="200" :disabled="saving" @input="draft.notice = nativeValue($event)" /><view class="character-count">{{ draft.notice.length }}/200</view></view>
     </template>
     <ActionDock v-if="!loading && !error" name="save" label="保存设置" :note="original === JSON.stringify(draft) ? '已保存' : '有待保存的修改'" :loading="saving" :disabled="original === JSON.stringify(draft)" @action="save" />
   </view>

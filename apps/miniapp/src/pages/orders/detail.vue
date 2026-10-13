@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { usePullRefresh } from "../../composables/useRefresh";
 import { ref } from "vue";
-import { onLoad, onShow } from "@dcloudio/uni-app";
+import { onLoad } from "@dcloudio/uni-app";
 import PageHeading from "../../components/PageHeading.vue";
 import OrderProgress from "../../components/OrderProgress.vue";
+import PickupCode from "../../components/PickupCode.vue";
+import OrderPayment from "../../components/OrderPayment.vue";
 import StateView from "../../components/StateView.vue";
 import IconButton from "../../components/IconButton.vue";
 import ReIcon from "../../components/ReIcon.vue";
 import FoodImage from "../../components/FoodImage.vue";
 import { formatOrderTime } from "../../utils/time";
-import { api, getErrorMessage } from "../../services/api";
+import { api, NetworkError, getErrorMessage } from "../../services/api";
+import { isPendingPayment } from "../../utils/order";
+import { usePagePolling } from "../../composables/usePagePolling";
 import { formatMoney } from "../../utils/format";
 import type { Order } from "../../types";
 
@@ -18,6 +22,54 @@ const merchantView = ref(false);
 const order = ref<Order | null>(null);
 const loading = ref(false);
 const error = ref("");
+const paying = ref(false);
+const cancelling = ref(false);
+let autoPay = false;
+let fetching = false;
+
+async function pay() {
+  const current = order.value;
+  if (!current || merchantView.value || !isPendingPayment(current) || paying.value || cancelling.value) return;
+  paying.value = true;
+  try {
+    const confirmed = await new Promise<boolean>((resolve) => uni.showModal({
+      title: "确认测试支付",
+      content: `支付金额 ${formatMoney(current.total)}，本次不会实际扣款。`,
+      confirmText: "确认支付",
+      cancelText: "暂不支付",
+      success: ({ confirm }) => resolve(confirm),
+      fail: () => resolve(false),
+    }));
+    if (!confirmed) return;
+    order.value = await api.payTestOrder(current.id);
+    uni.showToast({ title: "支付成功" });
+  } catch (reason: unknown) {
+    uni.showToast({
+      title: reason instanceof NetworkError ? "未确认支付结果，请下拉查看" : getErrorMessage(reason, "支付未完成，请稍后重试"),
+      icon: "none",
+    });
+  } finally { paying.value = false; }
+}
+
+function requestCancel() {
+  if (!order.value || paying.value || cancelling.value || merchantView.value) return;
+  uni.showModal({
+    title: "取消订单",
+    content: order.value.paymentStatus === "PAID" ? "取消后将撤销这笔测试支付，确定取消吗？" : "确定取消这笔订单吗？",
+    success: ({ confirm }) => { if (confirm) void cancel(); },
+  });
+}
+
+async function cancel() {
+  if (!order.value || paying.value || cancelling.value) return;
+  cancelling.value = true;
+  try {
+    order.value = await api.cancelOrder(order.value.id);
+    uni.showToast({ title: "订单已取消" });
+  } catch (reason: unknown) {
+    uni.showToast({ title: getErrorMessage(reason, "取消失败，请稍后重试"), icon: "none" });
+  } finally { cancelling.value = false; }
+}
 
 function openShop() {
   if (!order.value || merchantView.value) return;
@@ -25,11 +77,13 @@ function openShop() {
 }
 
 async function load(silent = false) {
+  if (fetching || paying.value || cancelling.value) return;
   if (!orderId.value) {
     error.value = "订单地址无效";
     return;
   }
   if (!silent) { loading.value = true; error.value = ""; }
+  fetching = true;
   try {
     order.value = merchantView.value
       ? await api.merchantOrder(orderId.value)
@@ -39,6 +93,7 @@ async function load(silent = false) {
     if (silent) uni.showToast({ title: message, icon: "none" });
     else { order.value = null; error.value = message; }
   } finally {
+    fetching = false;
     if (!silent) loading.value = false;
   }
 }
@@ -46,10 +101,14 @@ async function load(silent = false) {
 onLoad((query) => {
   orderId.value = typeof query?.id === "string" ? query.id : "";
   merchantView.value = query?.merchant === "1";
+  autoPay = query?.pay === "1" && !merchantView.value;
 });
-onShow(() => {
-  if (orderId.value) void load(Boolean(order.value));
-});
+usePagePolling(() => {
+  if (order.value && ["CREATED", "ACCEPTED", "READY"].includes(order.value.status)) void load(true);
+}, { interval: 15_000, onPageShow: async () => {
+  await load(Boolean(order.value));
+  if (autoPay && order.value) { autoPay = false; await pay(); }
+} });
 usePullRefresh(() => load(Boolean(order.value)));
 </script>
 
@@ -60,7 +119,8 @@ usePullRefresh(() => load(Boolean(order.value)));
     <StateView v-if="!loading && error" :error="error" action-text="重新加载" @action="load()" />
     <template v-if="order && !loading && !error">
       <OrderProgress :order="order" />
-      <view v-if="order.status === 'READY'" class="pickup-reference"><text class="pickup-label">取餐订单号</text><text class="pickup-number" user-select>{{ order.number }}</text><text class="pickup-caption">到店向商户出示此订单</text></view>
+      <OrderPayment :order="order" :merchant="merchantView" :busy="paying || cancelling" @pay="pay" />
+      <PickupCode v-if="order.status === 'READY'" :number="order.number" />
       <view class="receipt motion-enter">
         <view class="receipt-shop" :role="!merchantView ? 'button' : undefined" @click="openShop">
           <FoodImage :size="40" />
@@ -79,7 +139,8 @@ usePullRefresh(() => load(Boolean(order.value)));
         <view class="info-row"><text class="info-label">备注</text><text class="info-value">{{ order.remark || '无' }}</text></view>
         <view v-if="order.status === 'READY'" class="pickup-note"><ReIcon name="bag" color="danger" :size="18" /><text>请向商户出示本页取餐</text></view>
       </view>
-      <view v-if="!merchantView" class="reorder-row"><text>再逛逛这家店</text><IconButton name="arrow-right" label="返回店铺点餐" variant="primary" @click="openShop" /></view>
+      <view v-if="!merchantView && order.status === 'CREATED'" class="cancel-row"><text>取消订单</text><IconButton name="close" label="取消订单" variant="danger" :loading="cancelling" :disabled="paying" @click="requestCancel" /></view>
+      <view v-if="!merchantView && !isPendingPayment(order)" class="reorder-row"><text>再逛逛这家店</text><IconButton name="arrow-right" label="返回店铺点餐" variant="primary" @click="openShop" /></view>
     </template>
   </view>
 </template>
@@ -106,7 +167,5 @@ usePullRefresh(() => load(Boolean(order.value)));
 .number { font-size: var(--font-caption); font-variant-numeric: tabular-nums; }
 .pickup-note { display: flex; align-items: center; gap: 16rpx; margin-top: 44rpx; padding-top: 36rpx; border-top: 2rpx solid var(--color-border); color: var(--color-accent); font-size: var(--font-caption); }
 .reorder-row { display: flex; align-items: center; justify-content: flex-end; gap: 24rpx; margin-top: 40rpx; color: var(--color-brand); font-size: var(--font-caption); }
-.pickup-reference { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); padding: var(--space-4); border: 2rpx solid var(--color-brand); border-radius: var(--radius-card); background: var(--color-surface); }
-.pickup-label, .pickup-caption { color: var(--color-text-secondary); font-size: var(--font-caption); }
-.pickup-number { max-width: 100%; color: var(--color-brand); font-size: var(--font-title); font-weight: 700; letter-spacing: 2rpx; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: center; }
+.cancel-row { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3); color: var(--color-text-secondary); font-size: var(--font-caption); }
 </style>

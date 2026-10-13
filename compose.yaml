@@ -58,6 +58,7 @@ services:
       DEV_AUTH_ENABLED: ${DEV_AUTH_ENABLED:-false}
       WECHAT_APP_ID: ${WECHAT_APP_ID:-}
       WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      TEST_PAYMENT_ENABLED: ${TEST_PAYMENT_ENABLED:-false}
     depends_on:
       migrate:
         condition: service_completed_successfully

@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { OrderStatus, Prisma, Role } from "@prisma/client";
+import { OrderStatus, PaymentMethod, PaymentStatus, Prisma, Role } from "@prisma/client";
 import { AuthenticatedUser } from "../auth/auth";
 import { CreateOrderDto } from "./orders.dto";
 import {
@@ -14,11 +14,13 @@ import {
   isSameIdempotentOrder,
   normalizeOrderItems,
   normalizeRemark,
+  orderNumberPrefix,
   OrderActor,
   OrderItemQuantity,
 } from "./order-policy";
 import { PrismaService } from "../database/prisma.service";
 import { orderResponseSelect } from "./order.selects";
+import { assertTestPaymentsEnabled } from "../payments/payment-policy";
 
 const existingOrderSelect = {
   ...orderResponseSelect,
@@ -54,6 +56,7 @@ export class OrdersService {
 
     const existing = await this.findExisting(student.id, body.idempotencyKey);
     if (existing) return this.validateIdempotentReplay(existing, requested);
+    assertTestPaymentsEnabled();
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
@@ -85,11 +88,16 @@ export class OrdersService {
   ) {
     return this.prisma.$transaction(
       async (transaction) => {
+        await transaction.$queryRaw(
+          Prisma.sql`SELECT id FROM \`Order\` WHERE id = ${orderId} FOR UPDATE`,
+        );
         const order = await transaction.order.findUnique({
           where: { id: orderId },
           select: {
             id: true,
             status: true,
+            paymentStatus: true,
+            paymentMethod: true,
             studentId: true,
             shopId: true,
             shop: { select: { ownerId: true } },
@@ -103,9 +111,30 @@ export class OrdersService {
           throw new ConflictException("当前订单状态不允许此操作");
         }
 
+        if (
+          status !== OrderStatus.CANCELLED &&
+          order.paymentStatus !== PaymentStatus.PAID &&
+          order.paymentStatus !== PaymentStatus.NOT_REQUIRED
+        ) {
+          throw new ConflictException("订单尚未付款，不能开始制作");
+        }
+
+        const data: Prisma.OrderUpdateManyMutationInput = { status };
+        if (status === OrderStatus.CANCELLED) {
+          if (order.paymentStatus === PaymentStatus.PENDING) {
+            data.paymentStatus = PaymentStatus.CLOSED;
+          } else if (order.paymentStatus === PaymentStatus.PAID) {
+            if (order.paymentMethod !== PaymentMethod.TEST) {
+              throw new ConflictException("该订单需要先完成退款");
+            }
+            data.paymentStatus = PaymentStatus.REFUNDED;
+            data.refundedAt = new Date();
+          }
+        }
+
         const updated = await transaction.order.updateMany({
           where: { id: order.id, status: order.status },
-          data: { status },
+          data,
         });
         if (updated.count !== 1) {
           throw new ConflictException("订单状态已变化，请刷新后重试");
@@ -113,7 +142,7 @@ export class OrdersService {
 
         if (status === OrderStatus.CANCELLED) {
           for (const item of order.items) {
-            await transaction.product.update({
+            await transaction.product.updateMany({
               where: { id: item.productId },
               data: { stock: { increment: item.quantity } },
             });
@@ -177,6 +206,10 @@ export class OrdersService {
   ) {
     return this.prisma.$transaction(
       async (transaction) => {
+        // 先锁店铺行，让同店并发订单依次分配流水，避免共享读锁升级导致死锁。
+        await transaction.$queryRaw(
+          Prisma.sql`SELECT id FROM Shop WHERE id = ${request.shopId} FOR UPDATE`,
+        );
         const shop = await transaction.shop.findFirst({
           where: { id: request.shopId, isOpen: true },
           select: { id: true },
@@ -248,14 +281,35 @@ export class OrdersService {
           });
         }
 
+        const date = new Date();
+        const prefix = orderNumberPrefix(shop.id, date);
+        const count = await transaction.order.count({
+          where: { shopId: shop.id, number: { startsWith: prefix } },
+        });
+        // 不同店铺可能有相同短码；已有流水也可能因历史删除留下空缺。
+        const latest = await transaction.order.findFirst({
+          where: { number: { startsWith: prefix } },
+          select: { number: true },
+          orderBy: { number: "desc" },
+        });
+        const sequence = Math.max(
+          count + 1,
+          latest ? Number(latest.number.slice(prefix.length)) + 1 : 1,
+        );
+        if (sequence > 9999) {
+          throw new ConflictException("当日取餐号已用完，请联系商户");
+        }
+
         return transaction.order.create({
           data: {
-            number: createOrderNumber(),
+            number: createOrderNumber(shop.id, sequence, date),
             studentId,
             shopId: request.shopId,
             total,
             remark: request.remark,
             idempotencyKey,
+            paymentStatus: PaymentStatus.PENDING,
+            paymentMethod: PaymentMethod.TEST,
             items: { create: orderItems },
           },
           select: orderResponseSelect,

@@ -6,6 +6,11 @@ export const orderResponseSelect = {
   remark: true,
   createdAt: true,
   updatedAt: true,
+  paymentStatus: true,
+  paymentMethod: true,
+  paymentReference: true,
+  paidAt: true,
+  refundedAt: true,
   shop: { select: { id: true, name: true } },
   items: {
     select: {

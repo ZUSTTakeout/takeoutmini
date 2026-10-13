@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { OrderStatus } from "@prisma/client";
 
 export type OrderActor = "STUDENT" | "MERCHANT";
@@ -133,6 +132,29 @@ export function isSameIdempotentOrder(
   );
 }
 
-export function createOrderNumber(): string {
-  return `CF${randomUUID().replaceAll("-", "").toUpperCase()}`;
+export function orderNumberPrefix(shopId: string, date = new Date()): string {
+  const shopCode = shopId.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase();
+  if (shopCode.length !== 4) throw new RangeError("店铺编号至少需要四位字母或数字");
+
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Shanghai",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const day = ["year", "month", "day"]
+    .map((type) => parts.find((part) => part.type === type)!.value)
+    .join("");
+  return `${day}-${shopCode}-`;
+}
+
+export function createOrderNumber(
+  shopId: string,
+  sequence: number,
+  date = new Date(),
+): string {
+  if (!Number.isInteger(sequence) || sequence < 1 || sequence > 9999) {
+    throw new RangeError("当日订单流水必须在 1 到 9999 之间");
+  }
+  return `${orderNumberPrefix(shopId, date)}${String(sequence).padStart(4, "0")}`;
 }

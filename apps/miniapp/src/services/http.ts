@@ -1,5 +1,5 @@
 import { mockRequest } from "../mock";
-import { ApiError } from "./errors";
+import { ApiError, NetworkError } from "./errors";
 import { session } from "./session";
 
 const API_BASE_URL = (
@@ -54,11 +54,13 @@ export function request<T>(path: string, config: RequestConfig = {}) {
       },
       fail: (failure) => {
         const detail = failure.errMsg?.replace(/^request:fail\s*/i, "").trim();
-        reject(new ApiError(
-          /timeout/i.test(detail || "")
-            ? "请求超时，请检查网络后重试"
-            : detail || "无法连接服务器，请检查网络后重试",
-        ));
+        const message = /timeout/i.test(detail || "")
+          ? "请求超时，请检查网络后重试"
+          : detail || "无法连接服务器，请检查网络后重试";
+        const statusCode = (failure as { statusCode?: number }).statusCode;
+        reject(typeof statusCode === "number" && statusCode > 0
+          ? new ApiError(message, statusCode)
+          : new NetworkError(message));
       },
     });
   });
